@@ -6,21 +6,35 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Scanner;
 
+import com.java.crypto.Command.Action;
+import com.java.crypto.Command.Sender;
+import com.java.crypto.Command.Commands.ExitChatApplicationOperation;
+import com.java.crypto.Command.Commands.ListAllClientsNamesOperation;
+import com.java.crypto.Command.Commands.PingServerOperation;
+import com.java.crypto.Command.Commands.ShowServerInfoOperation;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
 public class Client {
-    
+
+    private static String[] COMMANDS = {
+        "ping", "server_info", "list", "exit"
+    };
+
+    private static char COMMAND_DELIMITER = '/';
     private static String DEFAULT_HOST = "localhost";
     private static final Scanner scanner = new Scanner(System.in);
     private Socket socket;
-    private static String name;
+    private String name;
+    private int msgLength;
 
     // channel where you can read from
     private InputStream is;
     // chanel where you can write from
     private OutputStream os;
 
+    // this is essential to the command pattern
+    private Sender sender;
 
     public Client(){}
     public Client ( String name, int port )
@@ -33,8 +47,12 @@ public class Client {
             is = socket.getInputStream();
             os = socket.getOutputStream();
 
+            sender = new Sender(os);
+
             mainLoop();
-        }catch( IOException e ) { e.printStackTrace(); }
+        }catch( IOException e ) {
+            exitAppOnServerShutDown();
+        }
     }
 
 
@@ -46,13 +64,15 @@ public class Client {
         // firstly, we notify the server of our name,
         // using the CONNECT packet
         Packet firstDefaultPacket = new Packet(name, PACKET_TYPE.CONNECT);
+        sendPacketLength(firstDefaultPacket);
         sendPacket(firstDefaultPacket);
-
+        
         inputTask();
 
         boolean running = true;
         while( running )
         {
+            receivePacketLength();
             receivePacket();
         }
     }
@@ -61,14 +81,13 @@ public class Client {
     public void inputTask ( )
     {
         new Thread( new Runnable() {
-            private String name = Client.name ;
-
             @Override
-
             public void run()
             {
+                String command = "";
+                Action command_ ;
                 boolean running = true;
-                String msg      = this.name + " >";
+                String msg      = name + " >";
                 String input    = "";
                 Packet packet   ;
 
@@ -77,12 +96,59 @@ public class Client {
                     System.out.print(msg); 
                     input = scanner.nextLine();
 
-                    // by default, we broadcast each msg
-                    packet = new Packet(input, PACKET_TYPE.SEND);
-                    sendPacket ( packet );
+                    // on Input check if there's any command
+                    // a command starts with the COMMAND_DELIMITER
+                    if ( input.charAt(0) == COMMAND_DELIMITER )
+                    {
+                        command = input.substring(1);
+                        if ( command.equals( COMMANDS[0]) )
+                        {
+                            command_ = new PingServerOperation(sender);
+                            command_.execute();
+                        }
+                        else if ( command.equals(COMMANDS[1]) )
+                        {
+                            command_ = new ShowServerInfoOperation( sender );
+                            command_.execute();
+                        }
+                        else if ( command.equals(COMMANDS[2]) )
+                        {
+                            command_ = new ListAllClientsNamesOperation( sender );
+                            command_.execute();
+                        }
+                        else if ( command.equals( COMMANDS[3]) )
+                        {
+                            command_ = new ExitChatApplicationOperation( sender) ;
+                            command_.execute();
+                        }
+                        else 
+                        {
+                            // TODO implement the lev algo
+                            // String diff
+                            System.out.println("this command doesn't work !");
+                        }
+                    }
+
+                    if ( !input.isEmpty() )
+                    {
+                        // by default, we broadcast each msg
+                        packet = new Packet(input, PACKET_TYPE.SEND);
+                        sendPacketLength(packet);
+                        sendPacket ( packet );
+                    }
                 }
             }
-        }).run();
+        }).start();
+    }
+
+    private void receivePacketLength ()
+    {
+        try {
+            this.msgLength = is.read();
+        }        
+        catch ( IOException e ){ 
+            System.err.println("Couldn't read the msg from the server");    
+        }
     }
 
     // but is this a blocking line ?, well yeah...
@@ -90,13 +156,44 @@ public class Client {
     private void receivePacket( )
     {
         Packet packet;
-        byte[] byteMsg;
 
         try {
-            byteMsg = is.readAllBytes();
-            packet  = new Packet( byteMsg );
-            System.out.println( packet.getMsg() );
-        }catch ( IOException e ){ e.printStackTrace(); }
+            byte[] allocateByteMsgArray = new byte[this.msgLength];
+            is.read(allocateByteMsgArray);
+            packet  = new Packet( allocateByteMsgArray );
+
+            switch (packet.getType()) {
+                case RESPONSE:
+                    // RESPONSE enum means it's a broacast
+                    System.out.println( packet.getMsg() );
+                    break;
+                
+                case DISCONNECT:
+                    System.out.println( packet.getMsg() );
+                    break;
+
+                default:
+                    break;
+            }
+
+        }catch ( IOException e ){ 
+            System.err.println("Couldn't read the msg from the server");    
+        }
+    }
+
+    // b4 sending any packet, we send it's length through the socket
+    private void sendPacketLength ( Packet packet ){
+        try{
+
+            // get the length of the byte array
+            int lengthByteMsgToSend = packet.output().length;
+
+            // the msgLength shall not exceed 255 ( for now let's not check for it )
+            os.write(lengthByteMsgToSend);
+            os.flush();
+        }catch ( IOException e ) { 
+            exitAppOnServerShutDown();
+        } 
     }
 
     // the client can : SEND_PACKETS ( MSG to the server );
@@ -108,10 +205,22 @@ public class Client {
             // wiich propably less efficient
             // TODO : change.
             os.write(packet.output());
-            // os.flush();
-            System.out.println( "[LOGGING] sent the packet with msg : " + packet.getMsg());
+            os.flush();
         }
         catch ( IOException e )
-        { e.printStackTrace(); }
+        { 
+            // if we're here, then the server must have shut down.
+            // we show to the user that the server shut down.
+            // exit the application with status 1 ( error )
+            exitAppOnServerShutDown();
+       }
+    }
+
+    // static, so that this function can be called inside static context
+    private static void exitAppOnServerShutDown()
+    {
+        String msg = "The server couldn't take it anymore...";
+        System.out.println(msg);
+        System.exit( 1 );
     }
 }

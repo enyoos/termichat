@@ -17,11 +17,11 @@ public class Packet {
     public Packet ( byte[] bytes )
     {
         // transform the byte array to readable ascii char
-        String stringyfiedBytes =  bytes.toString();
+        String stringyfiedBytes = Utils.bytes2String(bytes);
 
         // the last letter is the PACKET_TYPE
         int length = stringyfiedBytes.length();
-        int packeType = stringyfiedBytes.charAt(length - 1);
+        int packeType =Integer.parseInt(String.valueOf(stringyfiedBytes.charAt(length - 1)));
 
         switch ( packeType ) {
 
@@ -40,17 +40,24 @@ public class Packet {
             case 0:
                 type = PACKET_TYPE.PRIVATE;
                 break;
- 
+
+            case 3:
+                type = PACKET_TYPE.RESPONSE;
+                break;
+
             default:
                 break;
         }
 
         // the msg is just a slice the `stringyfiedBytes`
-        msg = stringyfiedBytes.substring(0, length);
+        msg = stringyfiedBytes.substring(0, length-1);
     }
 
     // output the final string ( to be sent to the server ), but in bytes
-    public byte[] output( ) { return ( msg + type.getValue() ).getBytes(); }
+    public byte[] output( ) { 
+        String output = msg + type.getValue();
+        return ( output ).getBytes(); 
+    }
 
 
     // GETTERS
@@ -59,5 +66,9 @@ public class Packet {
 
     // SETTERS
     public void setMsg ( String msg ) { this.msg = msg;}
-    public void setType ( PACKET_TYPE pakcetType ) { type = pakcetType; }
+    public void setType ( PACKET_TYPE packetType ) { type = packetType; }
+
+    // OVERRRIDES
+    @Override
+    public String toString( ) { return "msg : " + msg + " // type: " + type.getValue();}
 }

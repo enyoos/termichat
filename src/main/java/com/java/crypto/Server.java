@@ -29,6 +29,7 @@ public class Server {
             String msg = String.format( "[%d, %s] listening for incoming connection", port, name);
             System.out.println( msg );
             this.listen();
+
         }catch( IOException e )
         {
             e.printStackTrace();
@@ -49,10 +50,8 @@ public class Server {
                 System.out.println( String.format ("[%d] incoming connection !", socket.getPort()));
                 
                 // we handle each client in a seperate thread
-                System.out.println( "b4" );
                 Thread uniqueClientThread = new Thread( new ClientHandler(socket) );
                 uniqueClientThread.start();
-                System.out.println("after...");
             }
                 
         }catch( IOException e )

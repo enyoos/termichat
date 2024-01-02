@@ -1,0 +1,7 @@
+add the exit msg, when user ctrl + c
+finish the command feature.
+
+cached :     private static String[] COMMANDS = {
+        "ping", "server_info", "list"
+    };
+
