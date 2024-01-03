@@ -3,8 +3,15 @@ package com.java.crypto;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.Scanner;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 
 import com.java.crypto.Command.Action;
 import com.java.crypto.Command.Sender;
@@ -12,6 +19,7 @@ import com.java.crypto.Command.Commands.ExitChatApplicationOperation;
 import com.java.crypto.Command.Commands.ListAllClientsNamesOperation;
 import com.java.crypto.Command.Commands.PingServerOperation;
 import com.java.crypto.Command.Commands.ShowServerInfoOperation;
+import com.java.crypto.Encryption.Utils;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
@@ -20,6 +28,13 @@ public class Client {
     private static String[] COMMANDS = {
         "ping", "server_info", "list", "exit"
     };
+
+    // ------
+    private PublicKey pk;
+    private PrivateKey sk;
+    // private SecretKey sk;
+    // private SecretKey pk;
+    // ------
 
     private static char COMMAND_DELIMITER = '/';
     private static String DEFAULT_HOST = "localhost";
@@ -48,25 +63,32 @@ public class Client {
             os = socket.getOutputStream();
 
             sender = new Sender(os);
+        
+            // generate the pk only !
+            // the sk will be computed thanks to the diffie hellman exchange.
+            this.pk = Utils.gPK();    
 
             mainLoop();
-        }catch( IOException e ) {
+        }catch( IOException | NoSuchAlgorithmException err ) {
             exitAppOnServerShutDown();
         }
     }
-
 
     // this the main loop
     // think of it like the main Game Loop
     public void mainLoop()
     {
 
+        // bfore even sending your name
+        // you broadcast your key thanks
+
+
         // firstly, we notify the server of our name,
         // using the CONNECT packet
         Packet firstDefaultPacket = new Packet(name, PACKET_TYPE.CONNECT);
         sendPacketLength(firstDefaultPacket);
         sendPacket(firstDefaultPacket);
-        
+
         inputTask();
 
         boolean running = true;
