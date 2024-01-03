@@ -44,7 +44,6 @@ public final class Utils {
 }
 
 public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ return mK.modPow ( pk, P ); }
-
     public static void main(String[] args) throws Exception {
 
        // String msg = "some msg";
