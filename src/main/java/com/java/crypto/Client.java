@@ -46,10 +46,11 @@ public class Client {
 
     private Socket socket;
     private String name;
-    private int msgLength;
     // this is what rsa can decrypt;
     private static int MAX_BYTE_SIZE = 245;
     private static int MAX_SIZE_KEY_BIT = 257;
+    
+    private int msgLength = MAX_SIZE_KEY_BIT;
 
     // channel where you can read from
     private InputStream is;
@@ -88,24 +89,21 @@ public class Client {
         try{
             // you broadcast your key thanks
             // bfore even sending your name
-            System.out.println("sending the key to the server ...");
             BigInteger mixKey   = Utils.mixKey(this.pk, G, P);
             byte[] bytes        = mixKey.toByteArray();
-            int lengthArrayKey  = bytes.length;
 
             Packet packet = new Packet(bytes, PACKET_TYPE.KEY);
             byte[] bb     = packet.output();
 
-            System.out.println("the byte array : " + Arrays.toString ( bb ));
             // sending the content of the packet 
             os.write(bb);
             os.flush();
+
         }catch ( IOException e ) { e.printStackTrace(); }
     }
 
     private void sendNamePacket ( )
     {
-	System.out.println( "sending your name to the server" );
         Packet SecondDefaultPacket = new Packet(name, PACKET_TYPE.CONNECT);
         sendPacket(SecondDefaultPacket);
     }
@@ -120,15 +118,15 @@ public class Client {
         // using the CONNECT packet
         sendKeyPKMixed();
 
+        receivePacket();
+
         // then when the key exchange is finished, send the username.
         sendNamePacket();
 
         inputTask();
 
-        boolean running = true;
-        while( running )
+        while( this.socket.isConnected() )
         {
-            receivePacketLength();
             receivePacket();
         }
     }
@@ -154,57 +152,62 @@ public class Client {
 
                     // on Input check if there's any command
                     // a command starts with the COMMAND_DELIMITER
-                    if ( input.charAt(0) == COMMAND_DELIMITER )
-                    {
-                        command = input.substring(1);
-                        if ( command.equals( COMMANDS[0]) )
-                        {
-                            command_ = new PingServerOperation(sender);
-                            command_.execute();
-                        }
-                        else if ( command.equals(COMMANDS[1]) )
-                        {
-                            command_ = new ShowServerInfoOperation( sender );
-                            command_.execute();
-                        }
-                        else if ( command.equals(COMMANDS[2]) )
-                        {
-                            command_ = new ListAllClientsNamesOperation( sender );
-                            command_.execute();
-                        }
-                        else if ( command.equals( COMMANDS[3]) )
-                        {
-                            command_ = new ExitChatApplicationOperation( sender) ;
-                            command_.execute();
-                        }
-                        else 
-                        {
-                            // TODO implement the lev algo
-                            // String diff
-                            System.out.println("[ERROR] this command doesn't exist !");
-                        }
-                    }
 
-                    if ( !input.isEmpty() )
+                    if ( input.isEmpty() ) { System.out.println("[ERROR] you need to say something, everyone is waiting ..."); }
+                    else
                     {
-                        // by default, we broadcast each msg
-                        packet = new Packet(input, PACKET_TYPE.SEND);
-                        sendPacket ( packet );
+                        if ( input.charAt(0) == COMMAND_DELIMITER )
+                        {
+                            command = input.substring(1);
+                            if ( command.equals( COMMANDS[0]) )
+                            {
+                                command_ = new PingServerOperation(sender);
+                                command_.execute();
+                            }
+                            else if ( command.equals(COMMANDS[1]) )
+                            {
+                                command_ = new ShowServerInfoOperation( sender );
+                                command_.execute();
+                            }
+                            else if ( command.equals(COMMANDS[2]) )
+                            {
+                                command_ = new ListAllClientsNamesOperation( sender );
+                                command_.execute();
+                            }
+                            else if ( command.equals( COMMANDS[3]) )
+                            {
+                                command_ = new ExitChatApplicationOperation( sender) ;
+                                command_.execute();
+                            }
+                            else 
+                            {
+                                // TODO implement the lev algo
+                                // String diff
+                                System.out.println("[ERROR] this command doesn't exist !");
+                            }
+                        }
+                        else {
+                            // by default, we broadcast each msg
+                            System.out.println("sending the packet ...");
+                            packet = new Packet(input, PACKET_TYPE.SEND);
+                            sendPacket ( packet );
+                        }
                     }
                 }
             }
         }).start();
     }
 
-    private void receivePacketLength ()
-    {
-        try {
-            this.msgLength = is.read();
-        }        
-        catch ( IOException e ){ 
-            System.err.println("Couldn't read the msg from the server");    
-        }
-    }
+    // we don't need to handle this anymore.
+    // private void receivePacketLength ()
+    // {
+    //     try {
+    //         this.msgLength = is.read();
+    //     }        
+    //     catch ( IOException e ){ 
+    //         System.err.println("Couldn't read the msg from the server");    
+    //     }
+    // }
 
     // but is this a blocking line ?, well yeah...
     // we should maybe have a thread for writing and another thread for inputing
@@ -213,8 +216,13 @@ public class Client {
         Packet packet;
 
         try {
+
             byte[] allocateByteMsgArray = new byte[this.msgLength];
-            is.read(allocateByteMsgArray);
+            int statusCode = is.read(allocateByteMsgArray);
+
+            // do nothing if the byte read is zero
+            System.out.println("status code : " + statusCode);
+            if ( allocateByteMsgArray.length == 0 ) return;
             packet  = new Packet( allocateByteMsgArray );
 
             switch (packet.getType()) {
@@ -231,7 +239,8 @@ public class Client {
                     // which in theory should be the mixed key
                     // we should take that mixed key and put modPow it.
                     setSK( packet );
-		  break;
+                    break;
+
                 default:
                     break;
             }
@@ -245,28 +254,26 @@ public class Client {
     // sets the private key
     private void setSK ( Packet packet )
     {
-        System.out.println( "[LOGGING], the packet's status : " + packet );
-        this.sk = Utils.gSK ( this.pk, new BigInteger ( packet.getMsg () ), this.P );
-        System.out.println( "[LOGGING], generated the sk's : " + this.sk );
+        this.sk = Utils.gSK ( this.pk, new BigInteger ( packet.getMsg () ), Client.P );
     }
 
     // b4 sending any packet, we send it's length through the socket
-    private void sendPacketLength ( Packet packet ){
-        try{
+    // private void sendPacketLength ( Packet packet ){
+    //     try{
 
-            // get the length of the byte array
-            // if it is the key, then we can allow it to pass
-            // since we don't rsa the key.
-            int lengthMsgRaw = packet.getMsg().length();
-            int lengthByteMsgToSend = packet.output().length;
-            if ( lengthMsgRaw > 245 ) { System.out.println( "ERROR, due to the length of your secret key ( 2048 ), your messages shall not exceed 245 character" ); return; };
-            os.write(lengthByteMsgToSend);
-            os.flush();
+    //         // get the length of the byte array
+    //         // if it is the key, then we can allow it to pass
+    //         // since we don't rsa the key.
+    //         int lengthMsgRaw = packet.getMsg().length();
+    //         int lengthByteMsgToSend = packet.output().length;
+    //         if ( lengthMsgRaw > 245 ) { System.out.println( "ERROR, due to the length of your secret key ( 2048 ), your messages shall not exceed 245 character" ); return; };
+    //         os.write(lengthByteMsgToSend);
+    //         os.flush();
 
-        }catch ( IOException e ) { 
-            exitAppOnServerShutDown();
-        } 
-    }
+    //     }catch ( IOException e ) { 
+    //         exitAppOnServerShutDown();
+    //     } 
+    // }
 
     // the client can : SEND_PACKETS ( MSG to the server );
     private void sendPacket ( Packet packet )

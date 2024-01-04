@@ -29,16 +29,12 @@ public class Packet {
     {
         // transform the byte array to readable ascii char
         // String stringyfiedBytes = Utils.bytes2String(bytes);
-        System.out.println("the init arr : " + Arrays.toString( bytes ));
         byte[] msg = Utils.unPaddByOneArr(bytes);
-        System.out.println("the init arr : " + Arrays.toString( msg ));
-        
         this.msg = msg;
 
         // the last letter is the PACKET_TYPE
-        int lastIdx = bytes.length - 1;
-        int packeType = bytes[lastIdx];
-
+        // sometimes the byte array is prefixed with 0000
+        int packeType = Utils.getCorrectType(bytes);
 
         switch ( packeType ) {
 
@@ -64,6 +60,7 @@ public class Packet {
 
             case 4:
                 type = PACKET_TYPE.KEY;
+                break;
 
             default:
                 break;

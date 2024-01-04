@@ -17,16 +17,12 @@ public class ClientHandler implements Runnable{
         "LIST", "SHOW", "PING"
     };
 
-    // THE USER ( SERVER-SIDE ) ENTITY
-    private static ArrayList<Socket> sockets = new ArrayList<>();
-    private static ArrayList<String> usernames = new ArrayList<>();
+    private static ArrayList<Entity> clients = new ArrayList<>();
 
     private static final int MAX_SIZE = 257;
     private int msgLength = MAX_SIZE;
-    private Socket socket;
 
-    // the username provided by the client
-    private String name  ;
+    private Entity client;
 
     // receiving 
     private InputStream  is;
@@ -36,26 +32,42 @@ public class ClientHandler implements Runnable{
 
     public ClientHandler( Socket socket ) {
 
-        this.socket=socket; 
-        sockets.add(socket); 
+        client = new Entity(socket);
+        clients.add(client);
 
         try {
             is = socket.getInputStream();
             os = socket.getOutputStream();
             
             // also at the begining of the connection the client will send us his keys
-            receivePacket();
+            recvKey();
+
+            System.out.println("sending some packet ...");
+            String msg = "this is a test";
+            PACKET_TYPE type = PACKET_TYPE.CONNECT;
+            Packet packet = new Packet(msg, type);
+
+            // testing
+            os.write(packet.output());
+            os.flush();
 
             // at the begining of the connection the client will send us his username
             // but b4 let's receive the msgLength ( i.e the length of the byte array )
-            receivePacket();
+            System.out.println("receiving the name ...");
+            recvName();
             
         }catch( IOException e ){ e.printStackTrace(); }
     }
 
+
+    private void recvKey () { receivePacket(); }
+    public void recvName() { receivePacket(); }
+
     public void receivePacket ()
     {
+
         Packet packet = new Packet();
+
         try {
 
             // we check and read the first byte ( which is the length of the byte )
@@ -63,7 +75,7 @@ public class ClientHandler implements Runnable{
             is.read(allocateBytesArray);
 
             packet = new Packet(allocateBytesArray);
-            
+
             // according to its type
             // we take specific actions
             switch (packet.getType()) {
@@ -89,23 +101,24 @@ public class ClientHandler implements Runnable{
                 case RESPONSE:
                     handleQueryClient( packet );
                     break;
+
                 case KEY:
                     handleKeyExchange( packet );
                     break;
+
                 default:
                     break;
             }
         }catch( IOException e ){
             // if we're here, meaning that the user disconnected
-            handleDisconnectEvent(packet);
+            System.out.println("[ERROR], some err");
+            // handleDisconnectEvent(packet);
         }
     }
 
 
     private void handleKeyExchange( Packet packet )
     {
-	   // broadcast to the other user ( for now, we just assume that there are
-	   // only 2 users in the chat.
 	   broadcast ( packet ); 
     }
     
@@ -116,16 +129,16 @@ public class ClientHandler implements Runnable{
         System.out.println("TODO, NOT IMPLEMENTED");
     }
 
-    private void removeUserByName ( String name )
+    private void removeUserByName ( Entity client )
     {
         // getting the place of the name in the usernames array;
-        int idx = usernames.indexOf(name);
+        int idx = clients.indexOf(client);
 
         if ( idx > 0 )
         {
             // removing in both array ( sockets, ...)
-            usernames.remove(idx);
-            sockets.remove(idx);
+            clients.remove(idx);
+            clients.remove(idx);
         }
     }
 
@@ -133,25 +146,26 @@ public class ClientHandler implements Runnable{
     private void handleDisconnectEvent( Packet packet )
     {
         // remove the user from the 
-        String msg = "The user " + this.name + " has something better to do !";
+        String msg = "[BROADCAST] The user " + client.getName() + " has something better to do !";
         PACKET_TYPE type = PACKET_TYPE.DISCONNECT;
 
         packet.setType(type);
         packet.setMsg(msg);
 
-        removeUserByName(name);
+        removeUserByName(client);
         broadcast(packet);
     }
 
     private void handlePrivateEvent(Packet packet )
     {
+        System.out.println("handling private event ?");
         System.out.println("TODO, NOT IMPLEMENTED");
     }
 
     private void handleSendEvent( Packet packet )
     {
         // chatLog i.e [username]>...bla...bla...bla...
-        String chatLog = String.format("%s >" + packet.getMsg(), name);
+        String chatLog = String.format("%s >" + packet.getMsg(), client.getName());
         PACKET_TYPE packetType = PACKET_TYPE.RESPONSE; 
 
         packet.setMsg(chatLog);
@@ -165,11 +179,10 @@ public class ClientHandler implements Runnable{
     private void handleConnectEvent ( Packet packet )
     {
         // the connect packet will contain the name of curr client
-        name = packet.getMsg();
-        usernames.add(name);
+        client.setName(packet.getMsg());
+        
 
-        String msg = String.format ("[%s] just joined the chat !", name);
-        String greetingAnnoucement = msg;
+        String greetingAnnoucement = String.format ("[BROADCAST, %s] just joined the chat !", client.getName());
 
         PACKET_TYPE packetType     = PACKET_TYPE.RESPONSE;
 
@@ -183,45 +196,44 @@ public class ClientHandler implements Runnable{
     // sending to all the clients the msg of the current client;
     private void broadcast( Packet packet )
     {
+
+        System.out.println( "the array :  " + clients );
+        System.out.println("{BROADCASTING} packet with info : " + packet);
         byte[] bytes;
-        int  length;
         OutputStream os ;
 
         // iterating through the sockets array
-        for ( Socket socket : sockets )
+        for ( Entity client : clients )
         {
-            if ( socket != this.socket )
+            if ( client != this.client )
             {
+                System.out.println("broadcasting...");
                 try {
                     bytes = packet.output();
-                    length = bytes.length;
-
-                    os = socket.getOutputStream();
-
-                    // send the lenght of the packet first
-                    os.write( length );
-                    os.flush();
+                    os = client.getSocket().getOutputStream();
 
                     // send the actual packet
                     os.write(bytes);
                     os.flush();
-
                 }
                 catch( IOException e ) {
                     // this means that the user content msg couldn't ( for some reason )
                     // to the other clients
-                    try {
-                        String msg = "[SERVER] couldn't send your message to the other users";
-                        PACKET_TYPE type = PACKET_TYPE.RESPONSE;
-                        Packet _packet    = new Packet(msg, type);
-                        this.os.write( _packet.output() );
-                    }
-                    catch ( IOException _e )
-                    {
-                        // this means that the server lost the connection with the user
-                        // we'll interpret it like a disconnection
-                       handleDisconnectEvent(packet);
-                    }
+                    System.out.println("[ERROR], some err");
+                    // try {
+                    //     String msg = "[SERVER] couldn't send your message to the other users";
+                    //     PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+                    //     Packet _packet    = new Packet(msg, type);
+                    //     this.os.write( _packet.output() );
+                    //     this.os.flush();
+                    // }
+                    // catch ( IOException _e )
+                    // {
+                    //     // this means that the server lost the connection with the user
+                    //     // we'll interpret it like a disconnection
+                    //     // isn't that recursive ?
+                    //     System.out.println("[ERROR] 500");
+                    // }
                 }
             }
         }

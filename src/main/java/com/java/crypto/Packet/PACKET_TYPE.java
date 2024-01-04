@@ -4,7 +4,7 @@ public enum PACKET_TYPE {
     // DISCONNECTING, CONNECTING ( WILL NOT BE USED, SINCE THE CONNECTION IS ALREADY ESTABLISHED )
     // SEND ( I.E BROADCAST ), PRIVATE ( I.E DM ), RESPONSE ( server -> client ) in response to the client.
     // KEY ( diffie hellman exchange )
-    DISCONNECT ( -1 ), CONNECT ( 1 ) , SEND ( 2 ) , PRIVATE ( 0 ), RESPONSE(3), KEY(4);
+    DISCONNECT ( -1 ), CONNECT ( 1 ) , SEND ( 2 ) , PRIVATE ( -4 ), RESPONSE(3), KEY(4);
 
     private final byte value;
     private PACKET_TYPE( int b ) { this.value = ( byte ) b; }

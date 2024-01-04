@@ -31,6 +31,12 @@ public final class Utils {
     public static BigInteger generateBigPrime( )
     { return BigInteger.probablePrime ( BIT_SIZE, random ); }
 
+    public static int getCorrectType ( byte[] array )
+    {
+        if ( array[array.length-1] != 0 ) return  ( int ) array[array.length-1];
+        else return getCorrectType(unPaddByOneArr(array));
+    }
+
    public static KeyPair   gKeyPair ( ) throws Exception{ 
 		KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
 		generator.initialize(2048);
