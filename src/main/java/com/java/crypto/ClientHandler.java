@@ -42,15 +42,6 @@ public class ClientHandler implements Runnable{
             // also at the begining of the connection the client will send us his keys
             recvKey();
 
-            System.out.println("sending some packet ...");
-            String msg = "this is a test";
-            PACKET_TYPE type = PACKET_TYPE.CONNECT;
-            Packet packet = new Packet(msg, type);
-
-            // testing
-            os.write(packet.output());
-            os.flush();
-
             // at the begining of the connection the client will send us his username
             // but b4 let's receive the msgLength ( i.e the length of the byte array )
             System.out.println("receiving the name ...");
@@ -181,7 +172,7 @@ public class ClientHandler implements Runnable{
         // the connect packet will contain the name of curr client
         client.setName(packet.getMsg());
         
-
+        System.out.println("[LOGGING] received ( name ) with ( value ) " + client.getName());
         String greetingAnnoucement = String.format ("[BROADCAST, %s] just joined the chat !", client.getName());
 
         PACKET_TYPE packetType     = PACKET_TYPE.RESPONSE;

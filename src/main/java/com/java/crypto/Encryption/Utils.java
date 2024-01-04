@@ -1,6 +1,7 @@
 package com.java.crypto.Encryption;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
@@ -79,12 +80,7 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
     }
 
 
-    public static String bytes2Str ( byte[] bytes )
-    {
-        String ret = "";
-        for ( byte b : bytes ) { ret += ( char ) b; }
-        return ret;
-    }
+    public static String bytes2Str ( byte[] bytes ) { return new String ( bytes, StandardCharsets.UTF_8 ); }
 
     public static byte[] paddByOneArr ( byte[] bytes )
     {

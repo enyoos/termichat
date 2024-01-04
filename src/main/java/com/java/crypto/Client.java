@@ -5,14 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.Socket;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.util.Arrays;
 import java.util.Scanner;
-
-import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 
 import com.java.crypto.Command.Action;
 import com.java.crypto.Command.Sender;
@@ -49,7 +42,7 @@ public class Client {
     // this is what rsa can decrypt;
     private static int MAX_BYTE_SIZE = 245;
     private static int MAX_SIZE_KEY_BIT = 257;
-    
+
     private int msgLength = MAX_SIZE_KEY_BIT;
 
     // channel where you can read from
@@ -75,7 +68,7 @@ public class Client {
         
             // generate the pk only !
             // the sk will be computed thanks to the diffie hellman exchange.
-            System.out.println("Public key with length 2048 is being generated ...");
+            System.out.println("[CLIENT] public key with length 2048 is being generated ...");
             this.pk = Utils.generateBigPrime(); 
 
             mainLoop();
@@ -89,6 +82,7 @@ public class Client {
         try{
             // you broadcast your key thanks
             // bfore even sending your name
+            System.out.println("[CLIENT] sending the mixed key to the server.");
             BigInteger mixKey   = Utils.mixKey(this.pk, G, P);
             byte[] bytes        = mixKey.toByteArray();
 
@@ -104,6 +98,7 @@ public class Client {
 
     private void sendNamePacket ( )
     {
+        System.out.println("[CLIENT] sending the name to the server and other parties.");
         Packet SecondDefaultPacket = new Packet(name, PACKET_TYPE.CONNECT);
         sendPacket(SecondDefaultPacket);
     }
@@ -183,12 +178,11 @@ public class Client {
                             {
                                 // TODO implement the lev algo
                                 // String diff
-                                System.out.println("[ERROR] this command doesn't exist !");
+                                System.out.println("[CLIENT, ERROR] this command doesn't exist !");
                             }
                         }
                         else {
                             // by default, we broadcast each msg
-                            System.out.println("sending the packet ...");
                             packet = new Packet(input, PACKET_TYPE.SEND);
                             sendPacket ( packet );
                         }
@@ -218,12 +212,12 @@ public class Client {
         try {
 
             byte[] allocateByteMsgArray = new byte[this.msgLength];
-            int statusCode = is.read(allocateByteMsgArray);
+            is.read(allocateByteMsgArray);
 
             // do nothing if the byte read is zero
-            System.out.println("status code : " + statusCode);
-            if ( allocateByteMsgArray.length == 0 ) return;
             packet  = new Packet( allocateByteMsgArray );
+
+            System.out.println("received packet with info : " + packet);
 
             switch (packet.getType()) {
                 case RESPONSE:
@@ -246,15 +240,16 @@ public class Client {
             }
 
         }catch ( IOException e ){ 
-            System.err.println("Couldn't read the msg from the server");    
+            System.err.println("[CLIENT] couldn't read the msg from the server");    
         }
     }
 
 
     // sets the private key
-    private void setSK ( Packet packet )
+    private void setSK ( Packet packet ) 
     {
-        this.sk = Utils.gSK ( this.pk, new BigInteger ( packet.getMsg () ), Client.P );
+        System.out.println("[CLIENT] setting new private key.");
+        this.sk = Utils.gSK ( this.pk, new BigInteger ( packet.getMsg_ () ), Client.P ); 
     }
 
     // b4 sending any packet, we send it's length through the socket
