@@ -1,27 +1,22 @@
 package com.java.crypto.Encryption;
 
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Random;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -75,6 +70,32 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
 
        // System.out.println(decryptedMessage);
 
+    }
+
+
+    public static String bytes2Str ( byte[] bytes )
+    {
+        String ret = "";
+        for ( byte b : bytes ) { ret += ( char ) b; }
+        return ret;
+    }
+
+    public static byte[] paddByOneArr ( byte[] bytes )
+    {
+        int l = bytes.length + 1;
+        byte[] ret = new byte[l];
+        for ( int i = 0 ; i < bytes.length ; i++ ) { ret[i] = bytes[i]; }
+        return ret;
+    }
+
+    // like a substring func
+    public static byte[] unPaddByOneArr( byte[] bytes )
+    {
+        int l = bytes.length - 1;
+        if ( l < 0 ) return new byte[]{};
+        byte[] ret = new byte[l];
+        for ( int i = 0; i < l; i ++ ) { ret[i] = bytes[i]; }
+        return ret;
     }
 
 	public static BigInteger mixKey ( BigInteger key, BigInteger G, BigInteger P ) { return key.modPow ( G, P ); }

@@ -1,27 +1,44 @@
 package com.java.crypto.Packet;
 
+import java.util.Arrays;
+
+import com.java.crypto.Encryption.Utils;
+
 public class Packet {
-    private String msg;
+    private byte[] msg;
     private PACKET_TYPE type;    
 
     public Packet (){}
-    public Packet( String msg , PACKET_TYPE type )
+    public Packet( byte[] msg , PACKET_TYPE type )
     {
         this.msg = msg;
         this.type = type;
     }
 
-    public Packet ( String msg ) { this( msg, null ); }
-    public Packet ( PACKET_TYPE pt ) { this ( "", pt );}
+    public Packet ( String msg, PACKET_TYPE type )
+    {
+        this.msg = msg.getBytes();
+        this.type = type;
+    }
 
+    public Packet ( String msg ) { this( msg.getBytes(), null); }
+    public Packet ( PACKET_TYPE pt ) { this ( new byte[]{}, pt );}
+
+    // taking the output of hte packet class
     public Packet ( byte[] bytes )
     {
         // transform the byte array to readable ascii char
-        String stringyfiedBytes = Utils.bytes2String(bytes);
+        // String stringyfiedBytes = Utils.bytes2String(bytes);
+        System.out.println("the init arr : " + Arrays.toString( bytes ));
+        byte[] msg = Utils.unPaddByOneArr(bytes);
+        System.out.println("the init arr : " + Arrays.toString( msg ));
+        
+        this.msg = msg;
 
         // the last letter is the PACKET_TYPE
-        int length = stringyfiedBytes.length();
-        int packeType =Integer.parseInt(String.valueOf(stringyfiedBytes.charAt(length - 1)));
+        int lastIdx = bytes.length - 1;
+        int packeType = bytes[lastIdx];
+
 
         switch ( packeType ) {
 
@@ -45,30 +62,33 @@ public class Packet {
                 type = PACKET_TYPE.RESPONSE;
                 break;
 
+            case 4:
+                type = PACKET_TYPE.KEY;
+
             default:
                 break;
         }
-
-        // the msg is just a slice the `stringyfiedBytes`
-        msg = stringyfiedBytes.substring(0, length-1);
     }
 
     // output the final string ( to be sent to the server ), but in bytes
     public byte[] output( ) { 
-        String output = msg + type.getValue();
-        return ( output ).getBytes(); 
+        byte[] ret = Utils.paddByOneArr(this.msg);
+        ret[ret.length-1] = this.type.getValue();
+        return ret;
     }
 
 
     // GETTERS
-    public String getMsg () { return msg;}
+    public byte[] getMsg_(){ return this.msg;}
+    public String getMsg() { return Utils.bytes2Str(msg);}
     public PACKET_TYPE getType() { return type;}
 
     // SETTERS
-    public void setMsg ( String msg ) { this.msg = msg;}
+    public void setMsg ( String msg ) { this.msg = msg.getBytes();}
+    public void setMsg_ ( byte[] arr ) { this.msg = arr;}
     public void setType ( PACKET_TYPE packetType ) { type = packetType; }
 
     // OVERRRIDES
     @Override
-    public String toString( ) { return "msg : " + msg + " // type: " + type.getValue();}
+    public String toString( ) { return "msg : " + Utils.bytes2Str(msg) + " // type: " + type.getValue();}
 }

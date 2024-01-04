@@ -8,6 +8,7 @@ import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Arrays;
 import java.util.Scanner;
 
 import javax.crypto.SecretKey;
@@ -48,6 +49,7 @@ public class Client {
     private int msgLength;
     // this is what rsa can decrypt;
     private static int MAX_BYTE_SIZE = 245;
+    private static int MAX_SIZE_KEY_BIT = 257;
 
     // channel where you can read from
     private InputStream is;
@@ -72,7 +74,7 @@ public class Client {
         
             // generate the pk only !
             // the sk will be computed thanks to the diffie hellman exchange.
-	    System.out.println("Public key with length 2048 is being generated ...");
+            System.out.println("Public key with length 2048 is being generated ...");
             this.pk = Utils.generateBigPrime(); 
 
             mainLoop();
@@ -83,21 +85,28 @@ public class Client {
 
     private void sendKeyPKMixed ( )
     {
-	// you broadcast your key thanks
-	// bfore even sending your name
-      BigInteger mixKey   = Utils.mixKey(this.pk, G, P);
-      Packet FirstDefaultPacket = new Packet ( mixKey.toString(),PACKET_TYPE.KEY );	
-      System.out.println( "[LOGGING] packet status : " + FirstDefaultPacket );
-      System.out.println( "sending mixed key to the server..." );
-      sendPacketLength(FirstDefaultPacket);
-      sendPacket(FirstDefaultPacket);
+        try{
+            // you broadcast your key thanks
+            // bfore even sending your name
+            System.out.println("sending the key to the server ...");
+            BigInteger mixKey   = Utils.mixKey(this.pk, G, P);
+            byte[] bytes        = mixKey.toByteArray();
+            int lengthArrayKey  = bytes.length;
+
+            Packet packet = new Packet(bytes, PACKET_TYPE.KEY);
+            byte[] bb     = packet.output();
+
+            System.out.println("the byte array : " + Arrays.toString ( bb ));
+            // sending the content of the packet 
+            os.write(bb);
+            os.flush();
+        }catch ( IOException e ) { e.printStackTrace(); }
     }
 
     private void sendNamePacket ( )
     {
 	System.out.println( "sending your name to the server" );
         Packet SecondDefaultPacket = new Packet(name, PACKET_TYPE.CONNECT);
-        sendPacketLength(SecondDefaultPacket);
         sendPacket(SecondDefaultPacket);
     }
 
@@ -109,8 +118,10 @@ public class Client {
 
         // firstly, we notify the server of our name,
         // using the CONNECT packet
-	sendKeyPKMixed();
-	sendNamePacket();
+        sendKeyPKMixed();
+
+        // then when the key exchange is finished, send the username.
+        sendNamePacket();
 
         inputTask();
 
@@ -178,7 +189,6 @@ public class Client {
                     {
                         // by default, we broadcast each msg
                         packet = new Packet(input, PACKET_TYPE.SEND);
-                        sendPacketLength(packet);
                         sendPacket ( packet );
                     }
                 }
@@ -217,10 +227,10 @@ public class Client {
                     System.out.println( packet.getMsg() );
                     break;
 
-		case KEY: // we receive the key from the other user
-		    // which in theory should be the mixed key
-		    // we should take that mixed key and put modPow it.
-		    setSK( packet );
+                case KEY: // we receive the key from the other user
+                    // which in theory should be the mixed key
+                    // we should take that mixed key and put modPow it.
+                    setSK( packet );
 		  break;
                 default:
                     break;
@@ -235,9 +245,9 @@ public class Client {
     // sets the private key
     private void setSK ( Packet packet )
     {
-	System.out.println( "[LOGGING], the packet's status : " + packet );
-	  this.sk = Utils.gSK ( this.pk, new BigInteger ( packet.getMsg () ), this.P );
-	System.out.println( "[LOGGING], generated the sk's : " + this.sk );
+        System.out.println( "[LOGGING], the packet's status : " + packet );
+        this.sk = Utils.gSK ( this.pk, new BigInteger ( packet.getMsg () ), this.P );
+        System.out.println( "[LOGGING], generated the sk's : " + this.sk );
     }
 
     // b4 sending any packet, we send it's length through the socket
@@ -245,14 +255,14 @@ public class Client {
         try{
 
             // get the length of the byte array
-	    // if it is the key, then we can allow it to pass
-	    // since we don't rsa the key.
-	    boolean isKey = packet.getType() == PACKET_TYPE.KEY;
-	    int lengthMsgRaw = packet.getMsg().length();
+            // if it is the key, then we can allow it to pass
+            // since we don't rsa the key.
+            int lengthMsgRaw = packet.getMsg().length();
             int lengthByteMsgToSend = packet.output().length;
-	    if ( lengthMsgRaw > 245 && !isKey ) { System.out.println( "ERROR, due to the length of your secret key ( 2048 ), your messages shall not exceed 245 character" ); return; };
+            if ( lengthMsgRaw > 245 ) { System.out.println( "ERROR, due to the length of your secret key ( 2048 ), your messages shall not exceed 245 character" ); return; };
             os.write(lengthByteMsgToSend);
             os.flush();
+
         }catch ( IOException e ) { 
             exitAppOnServerShutDown();
         } 

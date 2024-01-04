@@ -1,8 +1,11 @@
+package com.java.crypto;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
@@ -18,7 +21,8 @@ public class ClientHandler implements Runnable{
     private static ArrayList<Socket> sockets = new ArrayList<>();
     private static ArrayList<String> usernames = new ArrayList<>();
 
-    private int msgLength;
+    private static final int MAX_SIZE = 257;
+    private int msgLength = MAX_SIZE;
     private Socket socket;
 
     // the username provided by the client
@@ -39,24 +43,14 @@ public class ClientHandler implements Runnable{
             is = socket.getInputStream();
             os = socket.getOutputStream();
             
+            // also at the begining of the connection the client will send us his keys
+            receivePacket();
+
             // at the begining of the connection the client will send us his username
             // but b4 let's receive the msgLength ( i.e the length of the byte array )
-            receiveLengthMsg();
             receivePacket();
             
         }catch( IOException e ){ e.printStackTrace(); }
-    }
-
-    private void receiveLengthMsg ( )
-    {
-        try{
-            this.msgLength = is.read();
-        }
-        catch( IOException e ) {
-            // also here, this means the user disconnected
-            Packet packet = new Packet();
-            handleDisconnectEvent(packet);
-        }
     }
 
     public void receivePacket ()
@@ -95,9 +89,9 @@ public class ClientHandler implements Runnable{
                 case RESPONSE:
                     handleQueryClient( packet );
                     break;
-		case KEY:
-			handleKeyExchange( packet );
-			break;
+                case KEY:
+                    handleKeyExchange( packet );
+                    break;
                 default:
                     break;
             }
@@ -127,9 +121,12 @@ public class ClientHandler implements Runnable{
         // getting the place of the name in the usernames array;
         int idx = usernames.indexOf(name);
 
-        // removing in both array ( sockets, ...)
-        usernames.remove(idx);
-        sockets.remove(idx);
+        if ( idx > 0 )
+        {
+            // removing in both array ( sockets, ...)
+            usernames.remove(idx);
+            sockets.remove(idx);
+        }
     }
 
 
@@ -241,8 +238,6 @@ public class ClientHandler implements Runnable{
             // however, the server will still be running
             // but, it's better to actually handle those
             // as if the user disconnected
-
-            receiveLengthMsg();
             receivePacket();
         }
     }
