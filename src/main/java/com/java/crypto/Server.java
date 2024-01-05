@@ -50,6 +50,8 @@ public class Server {
                 System.out.println( String.format ("[%d] incoming connection !", socket.getPort()));
                 
                 // we handle each client in a seperate thread
+                ClientHandler.setServerInstanceName(name);
+
                 Thread uniqueClientThread = new Thread( new ClientHandler(socket) );
                 uniqueClientThread.start();
             }

@@ -58,6 +58,9 @@ public final class Utils {
 public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ return mK.modPow ( pk, P ); }
 
     public static void main(String[] args) throws Exception {
+        StringBuilder sb = new StringBuilder();
+        sb.append("null");
+        System.out.println(sb.toString());
 
        String msg = "some msg";
        
@@ -89,17 +92,17 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
 
     }
 
-    public static PublicKey fromBigInteger2PK ( BigInteger n )
-    {
+    // public static PublicKey fromBigInteger2PK ( BigInteger n )
+    // {
 
-    }
+    // }
 
 
-    public String encrypt( String msg, BigInteger pk)
-    {
-        Cipher encryptCipher = Cipher.getInstance("RSA"); 
-        encryptCipher.init(Cipher.ENCRYPT_MODE, pk);
-    }
+    // public String encrypt( String msg, BigInteger pk)
+    // {
+    //     Cipher encryptCipher = Cipher.getInstance("RSA"); 
+    //     encryptCipher.init(Cipher.ENCRYPT_MODE, pk);
+    // }
 
 
     public static String bytes2Str ( byte[] bytes ) { return new String ( bytes, StandardCharsets.UTF_8 ); }
@@ -124,13 +127,13 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
 	public static BigInteger mixKey ( BigInteger key, BigInteger G, BigInteger P ) { return key.modPow ( G, P ); }
 
     // with the pk
-    public static String encryptMessageWithKey ( String msg, SecretKey key, IvParameterSpec spec ) throws Exception
-    {
-        String input = msg;
-        // a secret key is just a long number
-        return encrypt(DEFAULT_ALGO, input, key, spec);
+    // public static String encryptMessageWithKey ( String msg, SecretKey key, IvParameterSpec spec ) throws Exception
+    // {
+    //     String input = msg;
+    //     // a secret key is just a long number
+    //     return encrypt(DEFAULT_ALGO, input, key, spec);
 
-    }
+    // }
 
     public static PrivateKey fromByteSK ( byte[] bytes ) throws InvalidKeySpecException, NoSuchAlgorithmException
     {

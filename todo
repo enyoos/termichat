@@ -6,3 +6,8 @@ cached :     private static String[] COMMANDS = {
     };
 
 check that out : https://javaalmanac.io/snippets/security/diffiehellmankeyagreement/
+
+p    private static final String[] COMMANDS = { 
+        "list", "show", "ping"
+    };
+

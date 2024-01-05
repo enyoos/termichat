@@ -14,12 +14,13 @@ public class ClientHandler implements Runnable{
 
     // the list of commands
     private static final String[] COMMANDS = { 
-        "LIST", "SHOW", "PING"
+        "list", "show", "ping"
     };
 
     private static ArrayList<Entity> clients = new ArrayList<>();
 
     private static final int MAX_SIZE = 1024;
+    private static String serverInstanceName;
     private int msgLength = MAX_SIZE;
 
     private Entity client;
@@ -50,7 +51,7 @@ public class ClientHandler implements Runnable{
         }catch( IOException e ){ e.printStackTrace(); }
     }
 
-
+    public static void setServerInstanceName ( String name ) { ClientHandler.serverInstanceName = name;}
     private void recvKey () { receivePacket(); }
     public void recvName() { receivePacket(); }
 
@@ -117,7 +118,45 @@ public class ClientHandler implements Runnable{
     // i.e some api fecth ( like )
     private void handleQueryClient( Packet packet )
     {
-        System.out.println("TODO, NOT IMPLEMENTED");
+        // gettigns the Command
+        String command = packet.getMsg();
+        System.out.println("[LOGGING] received the command with value : " + command);
+        
+
+        // handling the list command
+        if( command.equals(COMMANDS[0]))
+        { sendListOfUsersIncludingSelf( ); }
+        // handlign the show command
+        if ( command.equals(COMMANDS[1]))
+        { sendServerInstanceInfo();}
+    }
+    
+    private void sendServerInstanceInfo()
+    {
+        // what to send and what not to send.
+        String info = String.format("Server name : %s", );
+    }
+
+
+    private void sendListOfUsersIncludingSelf( )
+    {
+        Packet packet = new Packet();
+        StringBuilder sb = new StringBuilder();
+
+        for ( Entity client : clients )
+        {
+            if ( client == this.client )
+            { sb.append(String.format ( "%s ( you )\n", client.getName())); }
+            else sb.append(String.format("%s\n", client.getName()));
+        }
+
+        packet.setMsg(sb.toString());
+        packet.setType(PACKET_TYPE.RESPONSE);
+
+        try{
+            this.os.write(packet.output());
+            this.os.flush();
+        }catch (IOException e ) {System.out.println( "[ERROR] couldn't send the result of the command with value : " + command);}
     }
 
     private void removeUserByName ( Entity client )
