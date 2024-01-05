@@ -19,7 +19,7 @@ public class ClientHandler implements Runnable{
 
     private static ArrayList<Entity> clients = new ArrayList<>();
 
-    private static final int MAX_SIZE = 257;
+    private static final int MAX_SIZE = 1024;
     private int msgLength = MAX_SIZE;
 
     private Entity client;
@@ -173,12 +173,14 @@ public class ClientHandler implements Runnable{
         client.setName(packet.getMsg());
         
         System.out.println("[LOGGING] received ( name ) with ( value ) " + client.getName());
-        String greetingAnnoucement = String.format ("[BROADCAST, %s] just joined the chat !", client.getName());
+        String greetingAnnoucement = String.format ("%s joined the chat!", client.getName());
 
         PACKET_TYPE packetType     = PACKET_TYPE.RESPONSE;
 
         packet.setMsg(greetingAnnoucement);
         packet.setType(packetType);
+
+        System.out.println("the length of the con pakcet : " + packet.output().length);
 
         // in reality you should only send the packet info ( i.e the msg )
         broadcast(packet);
@@ -187,9 +189,6 @@ public class ClientHandler implements Runnable{
     // sending to all the clients the msg of the current client;
     private void broadcast( Packet packet )
     {
-
-        System.out.println( "the array :  " + clients );
-        System.out.println("{BROADCASTING} packet with info : " + packet);
         byte[] bytes;
         OutputStream os ;
 
@@ -198,7 +197,6 @@ public class ClientHandler implements Runnable{
         {
             if ( client != this.client )
             {
-                System.out.println("broadcasting...");
                 try {
                     bytes = packet.output();
                     os = client.getSocket().getOutputStream();

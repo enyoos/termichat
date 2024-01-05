@@ -15,6 +15,11 @@ public class Packet {
         this.type = type;
     }
 
+    public static void main(String[] args) {
+        System.out.println("Packet.java");
+    }
+
+
     public Packet ( String msg, PACKET_TYPE type )
     {
         this.msg = msg.getBytes();
@@ -27,6 +32,9 @@ public class Packet {
     // taking the output of hte packet class
     public Packet ( byte[] bytes )
     {
+        // cleaning the bytes array
+        bytes = Utils.cleanByteArray(bytes);
+
         // transform the byte array to readable ascii char
         // String stringyfiedBytes = Utils.bytes2String(bytes);
         byte[] msg = Utils.unPaddByOneArr(bytes);
@@ -35,6 +43,8 @@ public class Packet {
         // the last letter is the PACKET_TYPE
         // sometimes the byte array is prefixed with 0000
         int packeType = Utils.getCorrectType(bytes);
+
+        System.out.println("the packet type : " + packeType);
 
         switch ( packeType ) {
 

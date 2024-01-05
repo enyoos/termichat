@@ -39,11 +39,9 @@ public class Client {
 
     private Socket socket;
     private String name;
-    // this is what rsa can decrypt;
-    private static int MAX_BYTE_SIZE = 245;
-    private static int MAX_SIZE_KEY_BIT = 257;
-
-    private int msgLength = MAX_SIZE_KEY_BIT;
+    // this is what rsa can decrypt;257
+    private static int MAX_BYTE_RECV         = 1024;
+    private static int MAX_BYTE_SIZE_FOR_RSA = 245;
 
     // channel where you can read from
     private InputStream is;
@@ -93,6 +91,8 @@ public class Client {
             os.write(bb);
             os.flush();
 
+            System.out.println("[CLIENT] sent the keys to the server");
+
         }catch ( IOException e ) { e.printStackTrace(); }
     }
 
@@ -112,8 +112,6 @@ public class Client {
         // firstly, we notify the server of our name,
         // using the CONNECT packet
         sendKeyPKMixed();
-
-        receivePacket();
 
         // then when the key exchange is finished, send the username.
         sendNamePacket();
@@ -184,7 +182,9 @@ public class Client {
                         else {
                             // by default, we broadcast each msg
                             packet = new Packet(input, PACKET_TYPE.SEND);
-                            sendPacket ( packet );
+                            if ( packet.output().length > MAX_BYTE_SIZE_FOR_RSA )
+                            { System.out.println("[ERROR] what you're trying to send is too big."); }
+                            else sendPacket ( packet );
                         }
                     }
                 }
@@ -211,13 +211,11 @@ public class Client {
 
         try {
 
-            byte[] allocateByteMsgArray = new byte[this.msgLength];
+            byte[] allocateByteMsgArray = new byte[MAX_BYTE_RECV];
             is.read(allocateByteMsgArray);
 
             // do nothing if the byte read is zero
             packet  = new Packet( allocateByteMsgArray );
-
-            System.out.println("received packet with info : " + packet);
 
             switch (packet.getType()) {
                 case RESPONSE:
@@ -278,6 +276,7 @@ public class Client {
             // we simply call the flush method;
             // wiich propably less efficient
             // TODO : change.
+            byte[] bytes = packet.output();
             os.write(packet.output());
             os.flush();
         }

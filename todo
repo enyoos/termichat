@@ -5,3 +5,4 @@ cached :     private static String[] COMMANDS = {
         "ping", "server_info", "list"
     };
 
+check that out : https://javaalmanac.io/snippets/security/diffiehellmankeyagreement/

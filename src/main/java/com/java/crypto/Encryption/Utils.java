@@ -4,6 +4,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -12,6 +13,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Random;
 
@@ -38,6 +40,14 @@ public final class Utils {
         else return getCorrectType(unPaddByOneArr(array));
     }
 
+    // removes all teh leading 0 of a string.
+    // think of it like a trim operation    .
+    public static byte[] cleanByteArray ( byte[] array )
+    {
+        if ( array[array.length-1] != 0 ) return array;
+        else return cleanByteArray(unPaddByOneArr(array));
+    }
+
    public static KeyPair   gKeyPair ( ) throws Exception{ 
 		KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
 		generator.initialize(2048);
@@ -49,39 +59,50 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
 
     public static void main(String[] args) throws Exception {
 
-       // String msg = "some msg";
-       // msg        = "some other very long msg, hello world, dont let me down ! Are you serious right now ! hello world, dont lecture me with that 30 dollar haircut., fklsjfdklsjfsdkljfdskjfds, asjfklsajfdksljfds, adsfjklsdklfjdklsjfdsklf, sdfdklfd=can you reapeat ?, sjkljfskljfdklsjfsdkljfdklsjwu847384973djsfjsdfkjsdfklsdjfklsdjklj";
-       // 
-       // KeyPair pair = gKeyPair();
-       // PrivateKey sk = pair.getPrivate();
-       // PublicKey  pk = pair.getPublic() ;
-       // System.out.println( "the key mat : " + Arrays.toString ( sk.getEncoded() ) );
-       // 
-       // Cipher encryptCipher = Cipher.getInstance("RSA");
-       // encryptCipher.init(Cipher.ENCRYPT_MODE, pk);
+       String msg = "some msg";
+       
+       KeyPair pair = gKeyPair();
+       PrivateKey sk = pair.getPrivate();
+       PublicKey  pk = pair.getPublic() ;
+       
+       Cipher encryptCipher = Cipher.getInstance("RSA");
+       encryptCipher.init(Cipher.ENCRYPT_MODE, pk);
 
+       // testing if hte cleanbyte func is workign
+       byte[] arr = {25,33,5,6,0,0,0,0};
+       byte[] out = cleanByteArray(arr);
 
-	    BigInteger b = new BigInteger ( "4389472" );
-	    System.out.println( b.toString() );
+       System.out.println(Arrays.toString(out));
 
        // // transforming our msg to bytes
-       // byte[] secretMessageBytes = msg.getBytes(StandardCharsets.UTF_8);
+       byte[] secretMessageBytes = msg.getBytes(StandardCharsets.UTF_8);
 
-       // byte[] encryptedMessageBytes = encryptCipher.doFinal(secretMessageBytes);
-
+       byte[] encryptedMessageBytes = encryptCipher.doFinal(secretMessageBytes);
+       
        // // for decryption
-       // Cipher decryptCipher = Cipher.getInstance("RSA");
-       // decryptCipher.init(Cipher.DECRYPT_MODE, sk);
-       // byte[] decryptedMessageBytes = decryptCipher.doFinal(encryptedMessageBytes);
-       // String decryptedMessage = new String(decryptedMessageBytes, StandardCharsets.UTF_8);
+       Cipher decryptCipher = Cipher.getInstance("RSA");
+       decryptCipher.init(Cipher.DECRYPT_MODE, sk);
+       byte[] decryptedMessageBytes = decryptCipher.doFinal(encryptedMessageBytes);
+       String decryptedMessage = new String(decryptedMessageBytes, StandardCharsets.UTF_8);
 
-       // System.out.println(decryptedMessage);
+       System.out.println(decryptedMessage);
+
+    }
+
+    public static PublicKey fromBigInteger2PK ( BigInteger n )
+    {
 
     }
 
 
-    public static String bytes2Str ( byte[] bytes ) { return new String ( bytes, StandardCharsets.UTF_8 ); }
+    public String encrypt( String msg, BigInteger pk)
+    {
+        Cipher encryptCipher = Cipher.getInstance("RSA"); 
+        encryptCipher.init(Cipher.ENCRYPT_MODE, pk);
+    }
 
+
+    public static String bytes2Str ( byte[] bytes ) { return new String ( bytes, StandardCharsets.UTF_8 ); }
     public static byte[] paddByOneArr ( byte[] bytes )
     {
         int l = bytes.length + 1;
@@ -123,47 +144,7 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
 	{
 		return KeyFactory.getInstance ( DEFAULT_ALGO).generatePublic( new X509EncodedKeySpec(bytes));
 	}
-
-    public static PublicKey gPK () throws NoSuchAlgorithmException  
-    {
-        System.out.println("generating 2048 bit public key ...");
-        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-        generator.initialize(BIT_SIZE);
-        KeyPair pair = generator.generateKeyPair();
-        PublicKey pk = pair.getPublic();
-        return pk;
-    }
-
-    public static String decryptMessageWithKey ( String input, SecretKey key , IvParameterSpec spec) throws Exception
-    {
-        return decrypt(DEFAULT_ALGO, input, ( SecretKey ) key , spec);
-    }
-
-    public static String encrypt(String algorithm, String input, SecretKey key,
-        IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
-        InvalidAlgorithmParameterException, InvalidKeyException,
-        BadPaddingException, IllegalBlockSizeException {
-        
-        Cipher cipher = Cipher.getInstance(algorithm);
-        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
-        byte[] cipherText = cipher.doFinal(input.getBytes());
-        return Base64.getEncoder()
-            .encodeToString(cipherText);
-
-    }
-
-    public static String decrypt(String algorithm, String cipherText, SecretKey key,
-        IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
-        InvalidAlgorithmParameterException, InvalidKeyException,
-        BadPaddingException, IllegalBlockSizeException {
-        
-        Cipher cipher = Cipher.getInstance(algorithm);
-        cipher.init(Cipher.DECRYPT_MODE, key, iv);
-        byte[] plainText = cipher.doFinal(Base64.getDecoder()
-            .decode(cipherText));
-        return new String(plainText);
-    }
-
+    
     // but how can we apply the diffie hellman protocol with a lot of ppl ?
     // idea : we can use the same key ( pk, and sk , for everyone ).
     // but this is very unefficient ?
