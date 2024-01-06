@@ -58,6 +58,20 @@ public final class Utils {
 		return pair;
 }
 
+public static String[] splitAtFirstOccurenceOf ( String t, String content )
+{
+    // check the first occurence of the comma
+    int firstOccurenceOfComma = content.indexOf(t);
+
+    String leftPart = content.substring(0, firstOccurenceOfComma);
+    String rightPart= content.substring(firstOccurenceOfComma + 1);
+
+    String[] ret = { leftPart, rightPart };
+
+    return ret;
+}
+
+
 public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ return mK.modPow ( pk, P ); }
 
     public static void main(String[] args) throws Exception {
@@ -113,9 +127,9 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
         int[] distances = new int[cmds.length];
         for ( int i = 0 ; i < cmds.length; i ++ ) { distances[i] = (_lev ( cmd, cmds[i]) ); }
         
+        return "";
     }
 
-    // watch the coding with john stuff
     public static void quicksort( int[] array )
     {
 
@@ -134,7 +148,7 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
             return 1 + min (
                 _lev ( cmd.substring(1), cmd2),
                 _lev ( cmd, cmd2.substring(1)),
-                _lev ( cmd.substring(1), cmd2.substring(1)),
+                _lev ( cmd.substring(1), cmd2.substring(1))
             );
         }
     }

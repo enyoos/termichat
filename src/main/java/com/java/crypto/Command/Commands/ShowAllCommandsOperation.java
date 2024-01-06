@@ -20,8 +20,8 @@ public class ShowAllCommandsOperation implements Action{
         "sever_info      returns the name of the server    ",
         "list            returns list of all the users in the group chat.",
         "exit            exits the group chat instance",
-        "dm              sends a private msg to some user                           (-m/--message, -u/--user)",
-        "help            shows all the commands, or details a particular command    (-c/--command)"
+        "dm              sends a private msg to some user                           (-m, -u)",
+        "help            shows all the commands, or details a particular command    (-c)"
     };
 
     public ShowAllCommandsOperation(){}

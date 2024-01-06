@@ -5,7 +5,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 
+import com.java.crypto.Encryption.Utils;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
@@ -65,6 +67,7 @@ public class ClientHandler implements Runnable{
             byte[] allocateBytesArray = new byte[this.msgLength];
             is.read(allocateBytesArray);
 
+            System.out.println("the allocated Byte array value : " + Arrays.toString(allocateBytesArray));
             packet = new Packet(allocateBytesArray);
 
             // according to its type
@@ -226,7 +229,8 @@ public class ClientHandler implements Runnable{
     private void handlePrivateMessaging(Packet packet )
     {
 
-        String[] args     = packet.getMsg().split(",");
+        System.out.println("[LOGGING] handling a private msg.");
+        String[] args     = Utils.splitAtFirstOccurenceOf(",", packet.getMsg());
 
         String targetUser = args[0];
         String content    = args[1];
@@ -315,8 +319,6 @@ public class ClientHandler implements Runnable{
 
         packet.setMsg(greetingAnnoucement);
         packet.setType(packetType);
-
-        System.out.println("the length of the con pakcet : " + packet.output().length);
 
         // in reality you should only send the packet info ( i.e the msg )
         broadcast(packet);
