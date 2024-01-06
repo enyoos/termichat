@@ -14,7 +14,7 @@ public class ExitChatApplicationOperation implements Action{
     @Override
     public void execute() {
 
-        String msg = "EXIT";
+        String msg = "exit";
         PACKET_TYPE type = PACKET_TYPE.DISCONNECT;
 
         Packet packet = new Packet(msg, type);

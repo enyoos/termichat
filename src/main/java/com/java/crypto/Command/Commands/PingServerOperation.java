@@ -13,7 +13,7 @@ public class PingServerOperation implements Action{
     
     @Override
     public void execute() {
-        String msg = "PING";
+        String msg = "ping";
         PACKET_TYPE type = PACKET_TYPE.RESPONSE;
         Packet packet = new Packet(msg, type);
 

@@ -13,7 +13,7 @@ public class ShowServerInfoOperation implements Action{
 
     @Override
     public void execute() {
-        String msg = "SHOW";
+        String msg = "server_info";
         PACKET_TYPE type = PACKET_TYPE.RESPONSE;
         Packet packet = new Packet(msg, type);
 

@@ -13,10 +13,13 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Random;
 
+import javax.crypto.AEADBadTagException;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -104,6 +107,47 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
     //     encryptCipher.init(Cipher.ENCRYPT_MODE, pk);
     // }
 
+    // return the most similar string
+    public static String lev( String cmd , String[] cmds )
+    {
+        int[] distances = new int[cmds.length];
+        for ( int i = 0 ; i < cmds.length; i ++ ) { distances[i] = (_lev ( cmd, cmds[i]) ); }
+        
+    }
+
+    // watch the coding with john stuff
+    public static void quicksort( int[] array )
+    {
+
+    }
+
+    private static int _lev( String cmd, String cmd2 )
+    {
+        if ( cmd.isEmpty() ) return cmd2.length();
+        else if ( cmd2.isEmpty() ) return cmd.length();
+        else if ( cmd.charAt(0) == cmd2.charAt(0) )
+        { return _lev ( cmd.substring(1), cmd2.substring(1) ); }
+        else 
+        {
+            // i feel it testing all the possible outcomes 
+            // and choosing the least big
+            return 1 + min (
+                _lev ( cmd.substring(1), cmd2),
+                _lev ( cmd, cmd2.substring(1)),
+                _lev ( cmd.substring(1), cmd2.substring(1)),
+            );
+        }
+    }
+
+    private static int min ( int... values )
+    {
+        int min = Integer.MAX_VALUE;
+        for ( int value : values ) {
+            if ( value < min ) { min = value; }
+        }
+
+        return min;
+    }
 
     public static String bytes2Str ( byte[] bytes ) { return new String ( bytes, StandardCharsets.UTF_8 ); }
     public static byte[] paddByOneArr ( byte[] bytes )

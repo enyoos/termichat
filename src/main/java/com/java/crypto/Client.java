@@ -9,9 +9,11 @@ import java.util.Scanner;
 
 import com.java.crypto.Command.Action;
 import com.java.crypto.Command.Sender;
+import com.java.crypto.Command.Commands.DMUserOperation;
 import com.java.crypto.Command.Commands.ExitChatApplicationOperation;
 import com.java.crypto.Command.Commands.ListAllClientsNamesOperation;
 import com.java.crypto.Command.Commands.PingServerOperation;
+import com.java.crypto.Command.Commands.ShowAllCommandsOperation;
 import com.java.crypto.Command.Commands.ShowServerInfoOperation;
 import com.java.crypto.Encryption.Utils;
 import com.java.crypto.Packet.PACKET_TYPE;
@@ -19,8 +21,8 @@ import com.java.crypto.Packet.Packet;
 
 public class Client {
 
-    private static String[] COMMANDS = {
-        "ping", "server_info", "list", "exit"
+    public static String[] COMMANDS = {
+        "ping", "server_info", "list", "exit","dm","help"
     };
 
     // ------
@@ -151,7 +153,11 @@ public class Client {
                     {
                         if ( input.charAt(0) == COMMAND_DELIMITER )
                         {
-                            command = input.substring(1);
+                            command = input.substring(
+                                1, 
+                                input.indexOf(" ") == -1 ? input.length() : input.indexOf(" ")
+                            );
+
                             if ( command.equals( COMMANDS[0]) )
                             {
                                 command_ = new PingServerOperation(sender);
@@ -171,12 +177,23 @@ public class Client {
                             {
                                 command_ = new ExitChatApplicationOperation( sender) ;
                                 command_.execute();
+                                
+                                System.out.println("[CLIENT] Existing the application ...");
+                                System.exit( 0 );
+                            }
+                            else if ( command.equals(COMMANDS[4]) )
+                            {
+                                command_ = new DMUserOperation(sender, input);
+                                command_.execute();
+                            }
+                            else if ( command.equals(COMMANDS[5]) )
+                            {
+                                command_ = new ShowAllCommandsOperation(sender, input);
+                                command_.execute();
                             }
                             else 
                             {
-                                // TODO implement the lev algo
-                                // String diff
-                                System.out.println("[CLIENT, ERROR] this command doesn't exist !");
+                                System.out.println("[CLIENT, ERROR] this command doesn't exist ! Type /help to  show all the commands");
                             }
                         }
                         else {

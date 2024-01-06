@@ -15,7 +15,7 @@ public class ListAllClientsNamesOperation implements Action{
     @Override
     public void execute() {
 
-        String msg = "LIST";
+        String msg = "list";
         PACKET_TYPE type = PACKET_TYPE.RESPONSE;
         Packet packet = new Packet(msg, type);
 

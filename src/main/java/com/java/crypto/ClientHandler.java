@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
@@ -14,7 +13,7 @@ public class ClientHandler implements Runnable{
 
     // the list of commands
     private static final String[] COMMANDS = { 
-        "list", "show", "ping"
+        "list", "server_info", "ping", "help"
     };
 
     private static ArrayList<Entity> clients = new ArrayList<>();
@@ -87,7 +86,7 @@ public class ClientHandler implements Runnable{
                 case PRIVATE:
                     // if you go and send what the PRIVATE enumeration means
                     // this function is another way to say handleDM.   
-                    handlePrivateEvent(packet);
+                    handlePrivateMessaging(packet);
                     break;
 
                 case RESPONSE:
@@ -126,29 +125,67 @@ public class ClientHandler implements Runnable{
         // handling the list command
         if( command.equals(COMMANDS[0]))
         { sendListOfUsersIncludingSelf( ); }
-        // handlign the show command
-        if ( command.equals(COMMANDS[1]))
+
+        // handlign the server_info command
+        else if ( command.equals(COMMANDS[1]))
         { sendServerInstanceInfo();}
+
+        // handling the ping command
+        else if ( command.equals(COMMANDS[2]))
+        { sendPongMessageToClient(); }
+
     }
-    
+
+    private void sendPongMessageToClient()
+    {
+        Packet packet = new Packet();
+
+        PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+        String resp = "Pong, server!";
+
+        packet.setMsg(resp);
+        packet.setType(type);
+        
+        try{
+            os.write(packet.output());
+            os.flush();
+        }
+        catch (IOException e ) { System.out.println("[ERROR] couldn't send the result of the command with value : " + COMMANDS[1]);}
+    }
+
     private void sendServerInstanceInfo()
     {
-        // what to send and what not to send.
-        String info = String.format("Server name : %s", );
+        Packet packet = new Packet();
+        
+        // what to send and what not to send. ( as server info )
+        String info = String.format("Server name : %s", ClientHandler.serverInstanceName);
+        PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+
+        packet.setMsg(info);
+        packet.setType(type);
+
+        try{
+            os.write(packet.output());
+            os.flush();
+        }
+        catch (IOException e ) { System.out.println("[ERROR] couldn't send the result of the command with value : " + COMMANDS[2]);}
     }
 
 
+    private static final String DELIMITER = "------------------";
     private void sendListOfUsersIncludingSelf( )
     {
         Packet packet = new Packet();
         StringBuilder sb = new StringBuilder();
 
+        sb.append("\n" + DELIMITER);
         for ( Entity client : clients )
         {
             if ( client == this.client )
-            { sb.append(String.format ( "%s ( you )\n", client.getName())); }
-            else sb.append(String.format("%s\n", client.getName()));
+            { sb.append(String.format ( "- %s ( you )\n", client.getName())); }
+            else sb.append(String.format("- %s\n", client.getName()));
         }
+        sb.append(DELIMITER);
 
         packet.setMsg(sb.toString());
         packet.setType(PACKET_TYPE.RESPONSE);
@@ -156,7 +193,7 @@ public class ClientHandler implements Runnable{
         try{
             this.os.write(packet.output());
             this.os.flush();
-        }catch (IOException e ) {System.out.println( "[ERROR] couldn't send the result of the command with value : " + command);}
+        }catch (IOException e ) {System.out.println( "[ERROR] couldn't send the result of the command with value : " + COMMANDS[0]);}
     }
 
     private void removeUserByName ( Entity client )
@@ -186,10 +223,70 @@ public class ClientHandler implements Runnable{
         broadcast(packet);
     }
 
-    private void handlePrivateEvent(Packet packet )
+    private void handlePrivateMessaging(Packet packet )
     {
-        System.out.println("handling private event ?");
-        System.out.println("TODO, NOT IMPLEMENTED");
+
+        String[] args     = packet.getMsg().split(",");
+
+        String targetUser = args[0];
+        String content    = args[1];
+
+        if ( ! isUserExist( targetUser) ) 
+        {
+
+            // send to the user the msg with the errorr
+            String err = "[ERROR] client with name " + targetUser + " doesn't exist";
+            PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+
+            packet.setMsg(err);
+            packet.setType(type);
+
+            try{
+                os.write(packet.output());
+                os.flush();
+            }catch( IOException e ) { System.out.println("[ERROR] couldn't send the error msg." );}
+            return;
+        }
+
+
+        sendPrivateMsgTo(targetUser, content);
+    }
+
+    private void sendPrivateMsgTo( String name, String content )
+    {
+        String msg;
+        PACKET_TYPE type;
+
+        Packet packet;
+
+        for ( Entity client : clients )
+        {
+            if ( client.getName().equals(name) )
+            {
+                msg = String.format( "%s -> You >%s", name, content);
+                type= PACKET_TYPE.RESPONSE;
+
+                packet = new Packet(msg, type);
+
+                try{
+                    client.getSocket().getOutputStream().write(packet.output());
+                    client.getSocket().getOutputStream().flush();
+                }
+                catch( IOException e ){ System.out.println("ERROR, couldn't send the msg...");}
+
+                break;
+            }
+        }
+    }
+
+    private boolean isUserExist ( String name )
+    {
+        // first check if the targetUser is present in the group chat
+        for ( Entity client : clients )
+        {
+            if ( client.getName().equals(name) ) { return true; }
+        }
+        return false;
     }
 
     private void handleSendEvent( Packet packet )

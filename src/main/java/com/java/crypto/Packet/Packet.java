@@ -44,8 +44,6 @@ public class Packet {
         // sometimes the byte array is prefixed with 0000
         int packeType = Utils.getCorrectType(bytes);
 
-        System.out.println("the packet type : " + packeType);
-
         switch ( packeType ) {
 
             case -1:
