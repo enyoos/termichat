@@ -95,7 +95,7 @@ public class Client {
 
             System.out.println("[CLIENT] sent the keys to the server");
 
-        }catch ( IOException e ) { e.printStackTrace(); }
+        }catch ( IOException e ) { exitAppOnServerShutDown(); }
     }
 
     private void sendNamePacket ( )
@@ -209,17 +209,6 @@ public class Client {
         }).start();
     }
 
-    // we don't need to handle this anymore.
-    // private void receivePacketLength ()
-    // {
-    //     try {
-    //         this.msgLength = is.read();
-    //     }        
-    //     catch ( IOException e ){ 
-    //         System.err.println("Couldn't read the msg from the server");    
-    //     }
-    // }
-
     // but is this a blocking line ?, well yeah...
     // we should maybe have a thread for writing and another thread for inputing
     private void receivePacket( )
@@ -255,7 +244,7 @@ public class Client {
             }
 
         }catch ( IOException e ){ 
-            System.err.println("[CLIENT] couldn't read the msg from the server");    
+            System.err.println("[CLIENT] tunnel in the content from the server");    
         }
     }
 
@@ -267,24 +256,6 @@ public class Client {
         this.sk = Utils.gSK ( this.pk, new BigInteger ( packet.getMsg_ () ), Client.P ); 
     }
 
-    // b4 sending any packet, we send it's length through the socket
-    // private void sendPacketLength ( Packet packet ){
-    //     try{
-
-    //         // get the length of the byte array
-    //         // if it is the key, then we can allow it to pass
-    //         // since we don't rsa the key.
-    //         int lengthMsgRaw = packet.getMsg().length();
-    //         int lengthByteMsgToSend = packet.output().length;
-    //         if ( lengthMsgRaw > 245 ) { System.out.println( "ERROR, due to the length of your secret key ( 2048 ), your messages shall not exceed 245 character" ); return; };
-    //         os.write(lengthByteMsgToSend);
-    //         os.flush();
-
-    //     }catch ( IOException e ) { 
-    //         exitAppOnServerShutDown();
-    //     } 
-    // }
-
     // the client can : SEND_PACKETS ( MSG to the server );
     private void sendPacket ( Packet packet )
     {
@@ -293,7 +264,6 @@ public class Client {
             // we simply call the flush method;
             // wiich propably less efficient
             // TODO : change.
-            byte[] bytes = packet.output();
             os.write(packet.output());
             os.flush();
         }

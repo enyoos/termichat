@@ -31,7 +31,7 @@ import javax.crypto.spec.IvParameterSpec;
 public final class Utils {
 
     private static final String DEFAULT_ALGO = "RSA";
-    private static final int BIT_SIZE         = 2048;
+    private static final int BIT_SIZE         = 128;
     private static final Random random        = new Random();
 
     public static BigInteger generateBigPrime( )
@@ -71,41 +71,86 @@ public static String[] splitAtFirstOccurenceOf ( String t, String content )
     return ret;
 }
 
+// shoudl output 4x4 matrix
+// go and check that ; https://www.comparitech.com/blog/information-security/what-is-aes-encryption/
+public static char[][] toCharMatrix( String input )
+{
+    char[][] charMatrix = new char[4][4];
+    char[]   vector     = input.toCharArray();
+    int  lvector        = vector.length;
+    char[] temp         = new char[4];
+
+    // [ ... ] -> [[.],[.],[.]]
+    int j = 0;
+    for ( int i = 0; i < lvector; i ++ )
+    {
+        temp[i / 2] = vector[i];
+
+        if ( (i + 1)  % 4 == 0 ) {
+            charMatrix[j] = temp;
+            j ++;
+            temp = new char[4];
+        }
+    }    
+
+
+    return charMatrix;
+}
+
 
 public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ return mK.modPow ( pk, P ); }
 
     public static void main(String[] args) throws Exception {
-        StringBuilder sb = new StringBuilder();
-        sb.append("null");
-        System.out.println(sb.toString());
 
-       String msg = "some msg";
+
+        // 10 rounds for 128-bit keys.
+        // 12 rounds for 192-bit keys.
+        // 14 rounds for 256-bit keys.
+        String msg = "buy me some pota";
+        String key = "keys are boring" ;
+
+        // System.out.println(msg.length());
+        System.out.println(Arrays.toString(toCharMatrix(msg)));
+
+
+
+
+
+
+
+
+
+    //     StringBuilder sb = new StringBuilder();
+    //     sb.append("null");
+    //     System.out.println(sb.toString());
+
+    //    String msg = "some msg";
        
-       KeyPair pair = gKeyPair();
-       PrivateKey sk = pair.getPrivate();
-       PublicKey  pk = pair.getPublic() ;
+    //    KeyPair pair = gKeyPair();
+    //    PrivateKey sk = pair.getPrivate();
+    //    PublicKey  pk = pair.getPublic() ;
        
-       Cipher encryptCipher = Cipher.getInstance("RSA");
-       encryptCipher.init(Cipher.ENCRYPT_MODE, pk);
+    //    Cipher encryptCipher = Cipher.getInstance("RSA");
+    //    encryptCipher.init(Cipher.ENCRYPT_MODE, pk);
 
-       // testing if hte cleanbyte func is workign
-       byte[] arr = {25,33,5,6,0,0,0,0};
-       byte[] out = cleanByteArray(arr);
+    //    // testing if hte cleanbyte func is workign
+    //    byte[] arr = {25,33,5,6,0,0,0,0};
+    //    byte[] out = cleanByteArray(arr);
 
-       System.out.println(Arrays.toString(out));
+    //    System.out.println(Arrays.toString(out));
 
-       // // transforming our msg to bytes
-       byte[] secretMessageBytes = msg.getBytes(StandardCharsets.UTF_8);
+    //    // // transforming our msg to bytes
+    //    byte[] secretMessageBytes = msg.getBytes(StandardCharsets.UTF_8);
 
-       byte[] encryptedMessageBytes = encryptCipher.doFinal(secretMessageBytes);
+    //    byte[] encryptedMessageBytes = encryptCipher.doFinal(secretMessageBytes);
        
-       // // for decryption
-       Cipher decryptCipher = Cipher.getInstance("RSA");
-       decryptCipher.init(Cipher.DECRYPT_MODE, sk);
-       byte[] decryptedMessageBytes = decryptCipher.doFinal(encryptedMessageBytes);
-       String decryptedMessage = new String(decryptedMessageBytes, StandardCharsets.UTF_8);
+    //    // // for decryption
+    //    Cipher decryptCipher = Cipher.getInstance("RSA");
+    //    decryptCipher.init(Cipher.DECRYPT_MODE, sk);
+    //    byte[] decryptedMessageBytes = decryptCipher.doFinal(encryptedMessageBytes);
+    //    String decryptedMessage = new String(decryptedMessageBytes, StandardCharsets.UTF_8);
 
-       System.out.println(decryptedMessage);
+    //    System.out.println(decryptedMessage);
 
     }
 
@@ -130,6 +175,7 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
         return "";
     }
 
+    // TODO : IMPLEMENT THE QUICKSORT ALGORITHM
     public static void quicksort( int[] array )
     {
 

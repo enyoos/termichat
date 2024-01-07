@@ -42,6 +42,7 @@ public class ClientHandler implements Runnable{
             os = socket.getOutputStream();
             
             // also at the begining of the connection the client will send us his keys
+            System.out.println("receiving the key.");
             recvKey();
 
             // at the begining of the connection the client will send us his username
@@ -49,7 +50,7 @@ public class ClientHandler implements Runnable{
             System.out.println("receiving the name ...");
             recvName();
             
-        }catch( IOException e ){ e.printStackTrace(); }
+        }catch( IOException e ){ System.out.println( "Couldn't handle the client request."); }
     }
 
     public static void setServerInstanceName ( String name ) { ClientHandler.serverInstanceName = name;}
@@ -67,7 +68,6 @@ public class ClientHandler implements Runnable{
             byte[] allocateBytesArray = new byte[this.msgLength];
             is.read(allocateBytesArray);
 
-            System.out.println("the allocated Byte array value : " + Arrays.toString(allocateBytesArray));
             packet = new Packet(allocateBytesArray);
 
             // according to its type
@@ -105,16 +105,14 @@ public class ClientHandler implements Runnable{
             }
         }catch( IOException e ){
             // if we're here, meaning that the user disconnected
-            System.out.println("[ERROR], some err");
+            handleDisconnectEvent(packet);
             // handleDisconnectEvent(packet);
         }
     }
 
 
     private void handleKeyExchange( Packet packet )
-    {
-	   broadcast ( packet ); 
-    }
+    { broadcast ( packet ); }
     
     // special request from the client
     // i.e some api fecth ( like )
@@ -122,9 +120,7 @@ public class ClientHandler implements Runnable{
     {
         // gettigns the Command
         String command = packet.getMsg();
-        System.out.println("[LOGGING] received the command with value : " + command);
         
-
         // handling the list command
         if( command.equals(COMMANDS[0]))
         { sendListOfUsersIncludingSelf( ); }
@@ -136,6 +132,9 @@ public class ClientHandler implements Runnable{
         // handling the ping command
         else if ( command.equals(COMMANDS[2]))
         { sendPongMessageToClient(); }
+
+        // do nothing, return nothing.
+        else { return; }
 
     }
 
@@ -210,6 +209,7 @@ public class ClientHandler implements Runnable{
             clients.remove(idx);
             clients.remove(idx);
         }
+        else { return ; }
     }
 
 
@@ -248,7 +248,8 @@ public class ClientHandler implements Runnable{
             try{
                 os.write(packet.output());
                 os.flush();
-            }catch( IOException e ) { System.out.println("[ERROR] couldn't send the error msg." );}
+            }catch( IOException e ) { System.out.println("[ERROR] tunnel the error msg, on private messaging." );}
+
             return;
         }
 
@@ -276,7 +277,7 @@ public class ClientHandler implements Runnable{
                     client.getSocket().getOutputStream().write(packet.output());
                     client.getSocket().getOutputStream().flush();
                 }
-                catch( IOException e ){ System.out.println("ERROR, couldn't send the msg...");}
+                catch( IOException e ){ System.out.println("ERROR, couldn't send the private message.");}
 
                 break;
             }
@@ -287,9 +288,7 @@ public class ClientHandler implements Runnable{
     {
         // first check if the targetUser is present in the group chat
         for ( Entity client : clients )
-        {
-            if ( client.getName().equals(name) ) { return true; }
-        }
+        { if ( client.getName().equals(name) ) { return true; } }
         return false;
     }
 
@@ -344,23 +343,7 @@ public class ClientHandler implements Runnable{
                     os.flush();
                 }
                 catch( IOException e ) {
-                    // this means that the user content msg couldn't ( for some reason )
-                    // to the other clients
-                    System.out.println("[ERROR], some err");
-                    // try {
-                    //     String msg = "[SERVER] couldn't send your message to the other users";
-                    //     PACKET_TYPE type = PACKET_TYPE.RESPONSE;
-                    //     Packet _packet    = new Packet(msg, type);
-                    //     this.os.write( _packet.output() );
-                    //     this.os.flush();
-                    // }
-                    // catch ( IOException _e )
-                    // {
-                    //     // this means that the server lost the connection with the user
-                    //     // we'll interpret it like a disconnection
-                    //     // isn't that recursive ?
-                    //     System.out.println("[ERROR] 500");
-                    // }
+                    System.out.println("[ERROR], couldn't broadcast the message.");
                 }
             }
         }
