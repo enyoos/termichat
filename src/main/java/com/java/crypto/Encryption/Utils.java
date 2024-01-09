@@ -18,6 +18,8 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Random;
+import java.util.Map;
+import java.util.HashMap;
 
 import javax.crypto.AEADBadTagException;
 import javax.crypto.BadPaddingException;
@@ -98,7 +100,7 @@ public static char[][] toCharMatrix( String input )
 }
 
 
-public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ return mK.modPow ( pk, P ); }
+	public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ return mK.modPow ( pk, P ); }
 
     public static void main(String[] args) throws Exception {
 
@@ -109,48 +111,15 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
         String msg = "buy me some pota";
         String key = "keys are boring" ;
 
-        // System.out.println(msg.length());
-        System.out.println(Arrays.toString(toCharMatrix(msg)));
+	String cmd1 = "somethign";
+	String[] cmds = {
+		"something else",
+		"other thing",
+		"other other thing",
+		"hello world"
+	};
 
-
-
-
-
-
-
-
-
-    //     StringBuilder sb = new StringBuilder();
-    //     sb.append("null");
-    //     System.out.println(sb.toString());
-
-    //    String msg = "some msg";
-       
-    //    KeyPair pair = gKeyPair();
-    //    PrivateKey sk = pair.getPrivate();
-    //    PublicKey  pk = pair.getPublic() ;
-       
-    //    Cipher encryptCipher = Cipher.getInstance("RSA");
-    //    encryptCipher.init(Cipher.ENCRYPT_MODE, pk);
-
-    //    // testing if hte cleanbyte func is workign
-    //    byte[] arr = {25,33,5,6,0,0,0,0};
-    //    byte[] out = cleanByteArray(arr);
-
-    //    System.out.println(Arrays.toString(out));
-
-    //    // // transforming our msg to bytes
-    //    byte[] secretMessageBytes = msg.getBytes(StandardCharsets.UTF_8);
-
-    //    byte[] encryptedMessageBytes = encryptCipher.doFinal(secretMessageBytes);
-       
-    //    // // for decryption
-    //    Cipher decryptCipher = Cipher.getInstance("RSA");
-    //    decryptCipher.init(Cipher.DECRYPT_MODE, sk);
-    //    byte[] decryptedMessageBytes = decryptCipher.doFinal(encryptedMessageBytes);
-    //    String decryptedMessage = new String(decryptedMessageBytes, StandardCharsets.UTF_8);
-
-    //    System.out.println(decryptedMessage);
+	System.out.println (lev ( cmd1, cmds ));
 
     }
 
@@ -169,18 +138,57 @@ public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ ret
     // return the most similar string
     public static String lev( String cmd , String[] cmds )
     {
+	    Map<Integer, String> map = new HashMap<>();
         int[] distances = new int[cmds.length];
-        for ( int i = 0 ; i < cmds.length; i ++ ) { distances[i] = (_lev ( cmd, cmds[i]) ); }
-        
-        return "";
+        for ( int i = 0 ; i < cmds.length; i ++ ) { 
+		int value = (_lev ( cmd, cmds[i]) );
+		distances[i] = value;
+		map.put ( value, cmds[i] );
+	}
+
+	quicksort ( distances );
+	int target = distances[0];
+
+	return map.get ( target );
     }
 
     // TODO : IMPLEMENT THE QUICKSORT ALGORITHM
     public static void quicksort( int[] array )
     {
-
+	quickSort ( array, 0, array.length-1 );
     }
 
+	public static void quickSort(int arr[], int begin, int end) {
+	    if (begin < end) {
+		int partitionIndex = partition(arr, begin, end);
+
+		quickSort(arr, begin, partitionIndex-1);
+		quickSort(arr, partitionIndex+1, end);
+	    }
+	}
+
+	private static int partition(int arr[], int begin, int end) {
+	    int pivot = arr[end];
+	    int i = (begin-1);
+
+	    for (int j = begin; j < end; j++) {
+		if (arr[j] <= pivot) {
+		    i++;
+
+		    int swapTemp = arr[i];
+		    arr[i] = arr[j];
+		    arr[j] = swapTemp;
+		}
+	    }
+
+	    int swapTemp = arr[i+1];
+	    arr[i+1] = arr[end];
+	    arr[end] = swapTemp;
+
+	    return i+1;
+	}
+
+	// implement caching ?
     private static int _lev( String cmd, String cmd2 )
     {
         if ( cmd.isEmpty() ) return cmd2.length();

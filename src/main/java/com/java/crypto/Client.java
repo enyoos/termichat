@@ -15,7 +15,7 @@ import com.java.crypto.Command.Commands.ListAllClientsNamesOperation;
 import com.java.crypto.Command.Commands.PingServerOperation;
 import com.java.crypto.Command.Commands.ShowAllCommandsOperation;
 import com.java.crypto.Command.Commands.ShowServerInfoOperation;
-import com.java.crypto.Encryption.Utils;
+import static com.java.crypto.Encryption.Utils;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
@@ -193,7 +193,10 @@ public class Client {
                             }
                             else 
                             {
-                                System.out.println("[CLIENT, ERROR] this command doesn't exist ! Type /help to  show all the commands");
+				    String meantCmd = lev ( input, COMMANDS );
+				    System.out.println( 
+						    "[ERROR] this command doesn't exist. Did you mean " + meantCmd + " ?"
+				    );
                             }
                         }
                         else {
