@@ -6,14 +6,18 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.Arrays;
+import java.util.Random;
 
 import com.java.crypto.Command.Action;
 import com.java.crypto.Command.Sender;
-import java.util.Random;
 import com.java.crypto.Command.Commands.*;
 import static com.java.crypto.Encryption.Utils.*;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 public class Client {
 
@@ -26,10 +30,14 @@ public class Client {
     // convert them to the adequate class when doing the rsa encryption
     // ------
 
-    private byte[] bytes_key                   ;
+    private SecretKey sk                       ;
+    private BigInteger diffieKey               ;
+
     private static char COMMAND_DELIMITER = '/';
-    private static String DEFAULT_HOST = "localhost";
+    private static final String DEFAULT_HOST = "localhost";
+    private static final String ALGORITHM = "AES";
     private static final Scanner scanner = new Scanner(System.in);
+    private static final Random  random  = new Random ();
     private static final int MAX_BYTE_RECV = 1024;
 
     private Socket socket;
@@ -40,8 +48,8 @@ public class Client {
     // chanel where you can write from
     private OutputStream os;
 
-    private static final int G = 55;
-    private static final int P = 65;
+    private static final BigInteger G = new BigInteger ( "482374" );
+    private static final BigInteger P = new BigInteger ( "423897" );
 
     // this is essential to the command pattern
     private Sender sender;
@@ -71,33 +79,36 @@ public class Client {
 
     private void sendKeyPKMixed ( )
     {
-        try{
-            // you broadcast your key thanks
-            // bfore even sending your name
-            System.out.println("[CLIENT] sending the mixed key to the server.");
-            // BigInteger mixKey_   = mixKey(this.pk, G, P);
-            // byte[] bytes        = mixKey_.toByteArray();
-
-	    int key = fromBytes ( this.bytes_key );
+	    // you broadcast your key thanks
+	    // bfore even sending your name
+	    System.out.println("[CLIENT] sending the mixed key to the server.");
+	    // BigInteger mixKey_   = mixKey(this.pk, G, P);
+	    // byte[] bytes        = mixKey_.toByteArray();
 	    
-            //Packet packet = new Packet(, PACKET_TYPE.KEY);
+	    byte[] bytes = this.G.modPow ( this.diffieKey, P ).toByteArray() ;
 
-            // sending the content of the packet 
-            //os.write(packet.output());
-            //os.flush();
+	    Packet firstDefaultPacket = new Packet( bytes , PACKET_TYPE.KEY);
 
-            //System.out.println("[CLIENT] sent the key to the server");
-
-        }catch ( IOException e ) { exitAppOnServerShutDown(); }
+	    // sending the content of the packet 
+	    sendPacket ( firstDefaultPacket );
     }
 
     private void sendNamePacket ( )
     {
+
         System.out.println("[CLIENT] sending the name to the server and other parties.");
         Packet SecondDefaultPacket = new Packet(name, PACKET_TYPE.CONNECT);
         sendPacket(SecondDefaultPacket);
     }
 
+
+    private void sleepClient ( long st )
+    {
+	try{
+		long sleepTime = 200;
+		Thread.sleep ( sleepTime );
+	}catch ( InterruptedException e ) { System.out.println( "unpatient" ); }
+    }
 
     // this the main loop
     // think of it like the main Game Loop
@@ -108,7 +119,15 @@ public class Client {
         // using the CONNECT packet
         sendKeyPKMixed();
 
-        // then when the key exchange is finished, send the username.
+
+	// how about we wait a bit ? 
+	
+	// for some reason the server can't read the key
+	// only if I sleep here.
+	// for like 2 s before sending the name.
+	sleepClient ( 2000 );
+
+	// then when the key exchange is finished, send the username.
         sendNamePacket();
 
         inputTask();
@@ -215,7 +234,7 @@ public class Client {
             is.read(allocateByteMsgArray);
 
             // do nothing if the byte read is zero
-            packet  = new Packet( allocateByteMsgArray );
+            packet = new Packet( allocateByteMsgArray );
 
             switch (packet.getType()) {
                 case RESPONSE:
@@ -227,10 +246,16 @@ public class Client {
                     System.out.println( packet.getMsg() );
                     break;
 
-                case KEY: // we receive the key from the other user
+                case KEY: 
+		    // we receive the key from the other user
                     // which in theory should be the mixed key
                     // we should take that mixed key and put modPow it.
                     setKey( packet );
+
+		    // for those who just joined the chat ( here, we assume
+		    // there's only two clients.
+		    // sendKeyPKMixed ();
+
                     break;
 
                 default:
@@ -245,18 +270,23 @@ public class Client {
     public void setKey ( Packet packet )
     {
 
-	    int firstKey = fromBytes ( packet.output() );
-	    int secondKey= fromBytes ( this.bytes_key );
+	    BigInteger recKey = new BigInteger ( packet.getMsg_() ); // OTHER'S KEY
+	    BigInteger ourKey = diffieKey ; // OUR KEY
+
+	    byte[] bytes           = recKey.modPow ( ourKey, P ).toByteArray();
+
+	    this.sk = new SecretKeySpec ( bytes , ALGORITHM );
+
+
+	    BigInteger skValueTemp = new BigInteger ( bytes );
+	    System.out.println( "[LOGGING] generating new secret key : " + skValueTemp );
 
     }
 
     public void genKey ( )
     {
-	    System.out.println( "generating random temporary key" );
-	int key_size  = 32;
-	this.bytes_key= new byte[key_size];
-	Random random = new Random();
-	random.nextBytes( bytes_key );
+	this.diffieKey = gKey ( 16 );
+	System.out.println( "[LOGGING] generated diffie key with value : " + this.diffieKey );
     }
 
 
@@ -268,6 +298,8 @@ public class Client {
             // we simply call the flush method;
             // wiich propably less efficient
             // TODO : change.
+	    System.out.println( "the array to send : " + Arrays.toString ( packet.output()));
+
             os.write(packet.output());
             os.flush();
         }

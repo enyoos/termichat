@@ -105,24 +105,20 @@ public static char[][] toCharMatrix( String input )
 
 
 	public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ return mK.modPow ( pk, P ); }
-	public static int        fromBytes( byte[] bytes )
-{
-	// exepect 32 byte ( int )
-	ByteBuffer wrp = ByteBuffer.wrap ( bytes );
-	return wrp.getInt();
-}
 
 public static int modPow ( int value, int g, int p ) { return ( (int)  Math.pow (g, value) ) % p; }
 
     public static void main(String[] args) throws Exception {
 
-        // 10 rounds for 128-bit keys.
-        // 12 rounds for 192-bit keys.
-        // 14 rounds for 256-bit keys.
-
-	    System.out.println( modPow ( 55, 55, 55 ));
-
+	// 10 rounds for 128-bit keys.
+	// 12 rounds for 192-bit keys.
+	// 14 rounds for 256-bit keys.
     }
+
+public static BigInteger gKey ( int bit ) { return BigInteger.probablePrime ( 16, new Random() ); }
+
+	public static byte[] fromInt ( int value )
+	{ return ByteBuffer.allocate( 4 ).putInt ( value ).array(); }
 
 	public static String decrypt(String algorithm, String cipherText, SecretKey key,
 	    IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
@@ -158,12 +154,6 @@ public static int modPow ( int value, int g, int p ) { return ( (int)  Math.pow 
 	    return new IvParameterSpec(iv);
 	}
 
-	public static SecretKey gKey(int n) throws NoSuchAlgorithmException {
-	    KeyGenerator keyGenerator = KeyGenerator.getInstance(ALGO);
-	    keyGenerator.init(n);
-	    SecretKey key = keyGenerator.generateKey();
-	    return key;
-	}
 
     // public static PublicKey fromBigInteger2PK ( BigInteger n )
     // {

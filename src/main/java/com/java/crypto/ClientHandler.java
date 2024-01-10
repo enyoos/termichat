@@ -13,12 +13,17 @@ import static com.java.crypto.Encryption.Utils.*;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
+// remenber this is the server 
+// ( it's going to apply for every client )
 public class ClientHandler implements Runnable{
 
     // the list of commands
     private static final String[] COMMANDS = { 
         "list", "server_info", "ping", "help"
     };
+
+    // specific to each client.
+    private ArrayList<Packet> packetPool = new ArrayList<>();
     
     // update it at each iter ?
     // at each msg ?
@@ -48,12 +53,10 @@ public class ClientHandler implements Runnable{
             os = socket.getOutputStream();
             
             // also at the begining of the connection the client will send us his keys
-            System.out.println("receiving the key.");
             recvKey();
 
             // at the begining of the connection the client will send us his username
             // but b4 let's receive the msgLength ( i.e the length of the byte array )
-            System.out.println("receiving the name ...");
             recvName();
             
         }catch( IOException e ){ System.out.println( "Couldn't handle the client request."); }
@@ -65,6 +68,11 @@ public class ClientHandler implements Runnable{
 
     public void receivePacket ()
     {
+	// the other parties sending msg.
+	// can miss the whole conv.
+	// so we store those "missing" packets into an arrayList
+	// and while we're listening we send it.
+	sendMissingPacket();
 
         Packet packet = new Packet();
 
@@ -76,9 +84,11 @@ public class ClientHandler implements Runnable{
 
             packet = new Packet(allocateBytesArray);
 
+	    PACKET_TYPE type = packet.getType ();
+
             // according to its type
             // we take specific actions
-            switch (packet.getType()) {
+            switch (type) {
 
                 case DISCONNECT:
                     handleDisconnectEvent(packet);
@@ -107,6 +117,7 @@ public class ClientHandler implements Runnable{
                     break;
 
                 default:
+		    handleUnknownPacket ( packet );
                     break;
             }
         }catch( IOException e ){
@@ -116,9 +127,12 @@ public class ClientHandler implements Runnable{
         }
     }
 
+	private void handleUnknownPacket ( Packet packet ) { System.out.println( "[LOGGING] packet unknown info : " + packet ); }
 
     private void handleKeyExchange( Packet packet )
-    { broadcast ( packet ); }
+    { 
+	    broadcast ( packet ); 
+    }
     
     // special request from the client
     // i.e some api fecth ( like )
@@ -332,29 +346,47 @@ public class ClientHandler implements Runnable{
     // sending to all the clients the msg of the current client;
     private void broadcast( Packet packet )
     {
+
+	System.out.println( packetPool );
         byte[] bytes;
         OutputStream os ;
+	boolean isClients = clients.size() != 1;
 
-        // iterating through the sockets array
-        for ( Entity client : clients )
-        {
-            if ( client != this.client )
-            {
-                try {
-                    bytes = packet.output();
-                    os = client.getSocket().getOutputStream();
+	if ( isClients ) _broadcast( packet );
+	else{ 
+		packetPool.add ( packet );
+	}
 
-                    // send the actual packet
-                    os.write(bytes);
-                    os.flush();
-                }
-                catch( IOException e ) {
-                    System.out.println("[ERROR], couldn't broadcast the message.");
-                }
-            }
-        }
     }
-    
+
+    private void _broadcast ( Packet packet )
+    {
+	for ( Entity client : clients )
+	{
+	    if ( client != this.client )
+	    {
+		try {
+		    client.getSocket().getOutputStream().write( packet.output() );
+		    client.getSocket().getOutputStream().flush()                 ;
+		}
+		catch( IOException e ) {
+		    System.out.println("[ERROR], couldn't broadcast the message.");
+		}
+	    }
+	}
+    }
+
+    private void sendMissingPacket ()
+    {
+	    boolean isAnyMissingPacket = packetPool.size() != 0;
+
+	    if ( isAnyMissingPacket )
+	    { for ( Packet packet : packetPool ) { _broadcast ( packet ); } }
+
+	    else return ;
+    }
+
+
     // like the client the client handler also has the mainLoop ( which is the run loop )
     // likewise think of it like the main game loop.
     @Override

@@ -40,9 +40,10 @@ public class Packet {
 
         // the last letter is the PACKET_TYPE
         // sometimes the byte array is prefixed with 0000
-        int packeType = Utils.getCorrectType(bytes);
+	
+	int packetType = bytes[bytes.length-1];
 
-        switch ( packeType ) {
+        switch ( packetType ) {
 
             case -1:
                 type = PACKET_TYPE.DISCONNECT;
