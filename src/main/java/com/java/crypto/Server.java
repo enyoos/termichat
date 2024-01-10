@@ -5,6 +5,8 @@ import java.net.ServerSocket;
 import java.lang.Thread;
 import java.net.Socket;
 
+import javax.crypto.spec.IvParameterSpec;
+
 public class Server {
 
     private ServerSocket ss;

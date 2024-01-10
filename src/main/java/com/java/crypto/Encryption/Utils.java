@@ -3,12 +3,20 @@ package com.java.crypto.Encryption;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
+import javax.crypto.KeyGenerator;
+import java.nio.ByteBuffer;
+import javax.crypto.spec.SecretKeySpec;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.SecureRandom; 
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
@@ -33,11 +41,7 @@ import javax.crypto.spec.IvParameterSpec;
 public final class Utils {
 
     private static final String DEFAULT_ALGO = "RSA";
-    private static final int BIT_SIZE         = 128;
     private static final Random random        = new Random();
-
-    public static BigInteger generateBigPrime( )
-    { return BigInteger.probablePrime ( BIT_SIZE, random ); }
 
     public static int getCorrectType ( byte[] array )
     {
@@ -101,27 +105,65 @@ public static char[][] toCharMatrix( String input )
 
 
 	public static BigInteger gSK ( BigInteger pk, BigInteger mK, BigInteger P ){ return mK.modPow ( pk, P ); }
+	public static int        fromBytes( byte[] bytes )
+{
+	// exepect 32 byte ( int )
+	ByteBuffer wrp = ByteBuffer.wrap ( bytes );
+	return wrp.getInt();
+}
+
+public static int modPow ( int value, int g, int p ) { return ( (int)  Math.pow (g, value) ) % p; }
 
     public static void main(String[] args) throws Exception {
-
 
         // 10 rounds for 128-bit keys.
         // 12 rounds for 192-bit keys.
         // 14 rounds for 256-bit keys.
-        String msg = "buy me some pota";
-        String key = "keys are boring" ;
 
-	String cmd1 = "somethign";
-	String[] cmds = {
-		"something else",
-		"other thing",
-		"other other thing",
-		"hello world"
-	};
-
-	System.out.println (lev ( cmd1, cmds ));
+	    System.out.println( modPow ( 55, 55, 55 ));
 
     }
+
+	public static String decrypt(String algorithm, String cipherText, SecretKey key,
+	    IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
+	    InvalidAlgorithmParameterException, InvalidKeyException,
+	    BadPaddingException, IllegalBlockSizeException {
+	    
+	    Cipher cipher = Cipher.getInstance(algorithm);
+	    cipher.init(Cipher.DECRYPT_MODE, key, iv);
+	    byte[] plainText = cipher.doFinal(Base64.getDecoder()
+		.decode(cipherText));
+	    return new String(plainText);
+	}
+
+    private static final int    KEY_SIZE = 256;
+    private static final String ALGO = "AES";
+    private static final String ALGO2 = "AES/CBC/PKCS5Padding";
+
+    public static String encrypt(String algorithm, String input, SecretKey key,
+	    IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
+	    InvalidAlgorithmParameterException, InvalidKeyException,
+	    BadPaddingException, IllegalBlockSizeException {
+	    
+	    Cipher cipher = Cipher.getInstance(algorithm);
+	    cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+	    byte[] cipherText = cipher.doFinal(input.getBytes());
+	    return Base64.getEncoder()
+		.encodeToString(cipherText);
+	}
+
+    public static IvParameterSpec generateIv() {
+	    byte[] iv = new byte[16];
+	    new SecureRandom().nextBytes(iv);
+	    return new IvParameterSpec(iv);
+	}
+
+	public static SecretKey gKey(int n) throws NoSuchAlgorithmException {
+	    KeyGenerator keyGenerator = KeyGenerator.getInstance(ALGO);
+	    keyGenerator.init(n);
+	    SecretKey key = keyGenerator.generateKey();
+	    return key;
+	}
 
     // public static PublicKey fromBigInteger2PK ( BigInteger n )
     // {
@@ -188,12 +230,34 @@ public static char[][] toCharMatrix( String input )
 	    return i+1;
 	}
 
-	// implement caching ?
+	private static int size = 1024;
+	private static long[] cache = new long[size];
+	static {
+		cache[1] = 1;
+		cache[2] = 1;
+	}
+
+// since for each fib we need to compute the other fib
+	private static long nthFib ( int nth )
+	{
+		if ( cache[nth] != 0 ) return cache[nth];
+
+		if ( nth <= 0 ) return 0;
+
+		long value = nthFib ( nth - 1 );
+		long othervalue = nthFib ( nth - 2 );
+
+		cache[nth] = value + othervalue;
+
+		return value + othervalue;
+	}
+
     private static int _lev( String cmd, String cmd2 )
     {
         if ( cmd.isEmpty() ) return cmd2.length();
         else if ( cmd2.isEmpty() ) return cmd.length();
         else if ( cmd.charAt(0) == cmd2.charAt(0) )
+		// we're computing that 2 times ?
         { return _lev ( cmd.substring(1), cmd2.substring(1) ); }
         else 
         {

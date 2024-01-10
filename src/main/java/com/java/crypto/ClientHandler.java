@@ -7,7 +7,9 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import com.java.crypto.Encryption.Utils;
+import javax.crypto.spec.IvParameterSpec;
+import static com.java.crypto.Encryption.Utils.*;
+
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
@@ -17,18 +19,22 @@ public class ClientHandler implements Runnable{
     private static final String[] COMMANDS = { 
         "list", "server_info", "ping", "help"
     };
-
+    
+    // update it at each iter ?
+    // at each msg ?
+    private static IvParameterSpec iv = new IvParameterSpec ( new byte[] {
+	    -30, 103, -50, -92, -70, 51, -94, 94, 90, 119, 116, -113, -116, 120, 23, -36
+    });
     private static ArrayList<Entity> clients = new ArrayList<>();
-
     private static final int MAX_SIZE = 1024;
     private static String serverInstanceName;
     private int msgLength = MAX_SIZE;
 
     private Entity client;
 
+
     // receiving 
     private InputStream  is;
-
     // writing 
     private OutputStream os;
 
@@ -230,7 +236,7 @@ public class ClientHandler implements Runnable{
     {
 
         System.out.println("[LOGGING] handling a private msg.");
-        String[] args     = Utils.splitAtFirstOccurenceOf(",", packet.getMsg());
+        String[] args     = splitAtFirstOccurenceOf(",", packet.getMsg());
 
         String targetUser = args[0];
         String content    = args[1];
