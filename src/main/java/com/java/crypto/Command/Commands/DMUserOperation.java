@@ -138,6 +138,8 @@ public class DMUserOperation implements Action{
             return;
         }
 
+
+	// TODO : encrypt the "this.content";
         String msg = this.targetUser + "," + this.content;
         PACKET_TYPE type = PACKET_TYPE.PRIVATE;
         Packet packet = new Packet(msg, type);

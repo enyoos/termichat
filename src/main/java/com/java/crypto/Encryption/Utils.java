@@ -3,6 +3,7 @@ package com.java.crypto.Encryption;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
+import java.nio.charset.Charset;
 import javax.crypto.KeyGenerator;
 import java.nio.ByteBuffer;
 import javax.crypto.spec.SecretKeySpec;
@@ -108,44 +109,159 @@ public static char[][] toCharMatrix( String input )
 
 public static int modPow ( int value, int g, int p ) { return ( (int)  Math.pow (g, value) ) % p; }
 
+    public static boolean hasSpecialChar_ ( String content )
+    {
+
+	    for ( char ch : content.toCharArray() )
+	    {
+
+		    if ( (ch >= 32 && ch <= 47) || ( ch >= 58 && ch <= 64 ) || ( ch >= 91 && ch <= 96 )
+				    || ( ch >= 123 && ch <= 127 ) ) { return true; }
+		    else continue;
+	    }
+
+	    return false;
+    }
+ 
+ private static final int MIN_SIZE = 4;
+
+ public static boolean correctNameNomenclature ( String name )
+    {
+	    boolean hasSpecialChar = hasSpecialChar_ ( name );
+	    boolean hasNonAsciiChar= !Charset.forName("US-ASCII").newEncoder().canEncode( name ); 
+	    boolean hasCorrectSize = name.length () >= MIN_SIZE;
+
+	    return ( ! hasSpecialChar && ! hasNonAsciiChar && hasCorrectSize ) ;
+    }
+
+
     public static void main(String[] args) throws Exception {
 
 	// 10 rounds for 128-bit keys.
 	// 12 rounds for 192-bit keys.
 	// 14 rounds for 256-bit keys.
+	
+	    BigInteger n = new BigInteger ( "27425479482750425052411308473799907881733956615995983604272760532752549886132188364177979682577637933682739157874614381139479324114205608822767804668030183777117212364720120437596396536521575673359676545490396298516702713135935003205818850321505845292881232654195070265215164909210247813280087445648457823509850033545776068495763859886627235335758321902561009282329416584312780131074195360947977983110793747142184327085584127714893377326384542209243309186960601920489936193440448428179859642038022647156899498217504893326117005948316948819913925241178630711303972544238391627138895162174451434461344485209534941428281" );
+	    byte[] bytes = cropBigIntBy ( 16, n );
+
+	    BigInteger n2= new BigInteger ( bytes );
+	    System.out.println( "result > " + n2 );	    
     }
 
-public static BigInteger gKey ( int bit ) { return BigInteger.probablePrime ( 16, new Random() ); }
+
+// we shall padd the iv with each each msg.
+	public static byte[] paddWithIv ( IvParameterSpec iv, String msg )
+	{
+		byte[] bytesMsg = msg.getBytes();
+		byte[] ivBytes  = iv.getIV()    ;
+
+		// check for the first 
+		byte[] result = concatArray ( ivBytes, bytesMsg );
+
+		return result;
+	}
+
+	// returns the iv from some arbitrary array
+	// we know that the iv is 16 bytes long.
+	// return : [b1 ( iv dict ), b2 ( the unpadded array )]
+	// so read the first 16 byte
+
+	public static byte[] unpaddIv ( byte[] bytes )
+	{
+
+		byte[] ret = new byte[16];
+		for ( int i = 0; i < 16; i ++ ) { ret[i] = bytes[i]; }
+		return ret;
+	}
+
+	public static byte[] unpaddIvAndGetMsg ( byte[] bytes )
+	{
+
+		int msgArrayLength = bytes.length - 16;
+		byte[] enc = new byte[msgArrayLength];
+
+		for ( int i = 16, j = 0; i < bytes.length ; i ++ )
+		{
+			enc[j] = bytes[i];
+			j++;
+		}
+		
+		return enc;
+	}
+
+
+	private static byte[] concatArray ( byte[] b1, byte[] b2 ) 
+	{
+		int length = b1.length + b2.length;
+		byte[] ret = new byte[length];
+
+		for ( int i = 0, j = 0; i < length ; i ++ )
+		{
+			if ( i < b1.length )
+			{ ret[i] = b1[i]; }
+
+			else 
+			{ ret[i] = b2[j]; j++; }
+		}
+
+
+		return ret;
+	}
+
+public static BigInteger gKey ( int bit ) { return BigInteger.probablePrime ( bit, new Random() ); }
 
 	public static byte[] fromInt ( int value )
 	{ return ByteBuffer.allocate( 4 ).putInt ( value ).array(); }
 
-	public static String decrypt(String algorithm, String cipherText, SecretKey key,
-	    IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
-	    InvalidAlgorithmParameterException, InvalidKeyException,
-	    BadPaddingException, IllegalBlockSizeException {
+	public static String decrypt( String cipherText, SecretKey key,
+	    IvParameterSpec iv) {
 	    
-	    Cipher cipher = Cipher.getInstance(algorithm);
-	    cipher.init(Cipher.DECRYPT_MODE, key, iv);
-	    byte[] plainText = cipher.doFinal(Base64.getDecoder()
-		.decode(cipherText));
-	    return new String(plainText);
+		try{
+		    Cipher cipher = Cipher.getInstance(ALGO2);
+		    cipher.init(Cipher.DECRYPT_MODE, key, iv);
+		    byte[] plainText = cipher.doFinal(Base64.getDecoder()
+			.decode(cipherText));
+		    return new String ( plainText );
+		}catch ( NoSuchPaddingException | NoSuchAlgorithmException |
+	    InvalidAlgorithmParameterException | InvalidKeyException |
+	    BadPaddingException | IllegalBlockSizeException  e ) { System.out.println( "[ERROR] couldn't decrypt the msg" ); }
+
+		return null;
 	}
 
-    private static final int    KEY_SIZE = 256;
-    private static final String ALGO = "AES";
-    private static final String ALGO2 = "AES/CBC/PKCS5Padding";
+public static byte[] cropBigIntBy ( int bit, BigInteger N )
+{
+	// expect for this use case ( the value 16 )
+	byte[] ret = new byte[bit]  ;
+	int bitLen = N.bitLength()  ;
+	byte[] arrN= N.toByteArray();
 
-    public static String encrypt(String algorithm, String input, SecretKey key,
-	    IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException,
-	    InvalidAlgorithmParameterException, InvalidKeyException,
-	    BadPaddingException, IllegalBlockSizeException {
-	    
-	    Cipher cipher = Cipher.getInstance(algorithm);
-	    cipher.init(Cipher.ENCRYPT_MODE, key, iv);
-	    byte[] cipherText = cipher.doFinal(input.getBytes());
-	    return Base64.getEncoder()
-		.encodeToString(cipherText);
+	if ( bitLen == bit ) return arrN;
+	else { for ( int i = 0 ; i < bit; i ++ ) { ret[i] = arrN[i]; } }
+
+	return ret;
+}
+
+    private static final int    KEY_SIZE = 256;
+    private static final String ALGO     = "AES";
+    private static final String ALGO2    = "AES/CBC/PKCS5Padding";
+
+    public static String encrypt( String input, SecretKey key,
+	    IvParameterSpec iv)
+        {
+
+	   try{
+		    Cipher cipher = Cipher.getInstance(ALGO2);
+		    cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+		    byte[] cipherText = cipher.doFinal(input.getBytes());
+		    return Base64.getEncoder()
+			.encodeToString(cipherText);
+	   }
+	   catch ( NoSuchPaddingException | NoSuchAlgorithmException |
+	    InvalidAlgorithmParameterException | InvalidKeyException |
+	    BadPaddingException | IllegalBlockSizeException e ) { System.err.println("[ERROR] couldn't encrypt the msg" ); }
+
+	   return null;
 	}
 
     public static IvParameterSpec generateIv() {
@@ -313,25 +429,23 @@ public static BigInteger gKey ( int bit ) { return BigInteger.probablePrime ( 16
 	{
 		return KeyFactory.getInstance ( DEFAULT_ALGO).generatePublic( new X509EncodedKeySpec(bytes));
 	}
-    
+
+   
+
+
+
     // but how can we apply the diffie hellman protocol with a lot of ppl ?
     // idea : we can use the same key ( pk, and sk , for everyone ).
     // but this is very unefficient ?
     // let's say we have two client.
 
 
-
-    // client              server              client
-    
-    // here we have diffie classic exchange
-    // so let's say a new client joins the chat.
-
-
-
-    // client             sever                client
-    //           client
-    
-
-    // this new client generate a new key.
+    // client joins the room
+    // send his mixed key to the server
+    // the server broadcast the keys to the occupants of the chat
+    // the other clients generate their keys with the given key ( the broadcasted one )
+    // and in return they send to the server their mixed keys
+    //
+    // ATTENTION TO THE INTEGER OVERFLOW ( COULD BE A PROBLEM ).
 
 }

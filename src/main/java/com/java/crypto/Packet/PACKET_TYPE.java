@@ -1,12 +1,18 @@
 package com.java.crypto.Packet;
 
 public enum PACKET_TYPE {
-    // DISCONNECTING, CONNECTING ( WILL NOT BE USED, SINCE THE CONNECTION IS ALREADY ESTABLISHED )
-    // SEND ( I.E BROADCAST ), PRIVATE ( I.E DM ), RESPONSE ( server -> client ) in response to the client.
-    // KEY ( diffie hellman exchange )
-    DISCONNECT ( -1 ), CONNECT ( 1 ) , SEND ( 2 ) , PRIVATE ( -4 ), RESPONSE(3), KEY(4);
 
+    DISCONNECT ( -1 ), // DISCONNECT EVENT
+    CONNECT    (  1 ), // CONNECT EVENT (SOMEONE JOINS THE CHAT )
+    PRIVATE    ( -4 ), // DM OPERATION
+    RESPONSE   (  3 ), // COMMUNICATION FROM THE SERVER TO THE CLIENT
+    KEY        (  4 ), // DIFFIE HELLMAN EXCHANGE SPECIFICATION PACKET
+    BROADCAST  ( -2 ), // BROADCASTING A MESSAGE TO EVERYONE 
+    REPEAT     (  5 ), // IF USERNAME IS USED, SEND REPEAT INTRUCTION
+    OK         (  6 ); // OK STANDS FOR OLL KORRECT
+			
     private final byte value;
     private PACKET_TYPE( int b ) { this.value = ( byte ) b; }
     public byte getValue(){ return value;}
+
 }

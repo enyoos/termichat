@@ -28,6 +28,7 @@ public class ClientHandler implements Runnable{
     // specific to each client.
     // instead how about we store them on the client side ?
     // first check if there are some clients and then report ?
+    private ArrayList<Packet> packetPool = new ArrayList<>();
 
     // update it at each iter ?
     // at each msg ?
@@ -36,7 +37,7 @@ public class ClientHandler implements Runnable{
     });
 
     private static ArrayList<Entity> clients = new ArrayList<>();
-    private static final int MAX_SIZE = 4096;
+    private static final int MAX_SIZE = 1024;
     private static String serverInstanceName;
     private int msgLength = MAX_SIZE;
 
@@ -147,7 +148,10 @@ public class ClientHandler implements Runnable{
 
 	private void handleUnknownPacket ( Packet packet ) { System.out.println( "[LOGGING] packet unknown info : " + packet ); }
 
-    private void handleKeyExchange( Packet packet ) { broadcast ( packet ); }
+    private void handleKeyExchange( Packet packet )
+    { 
+	    broadcast ( packet ); 
+    }
     
     // special request from the client
     // i.e some api fecth ( like )
@@ -396,6 +400,7 @@ public class ClientHandler implements Runnable{
 		String greetingAnnoucement = String.format ("%s joined the chat!", client.getName());
 		packet.setMsg(greetingAnnoucement);
 		
+	        sendMissingPackets( this, this.packetPool );
 		broadcast(packet)   ;
 	}
     }
@@ -405,8 +410,13 @@ public class ClientHandler implements Runnable{
     {
         byte[] bytes;
         OutputStream os ;
+	boolean isMoreThan2Clients = clients.size() > 1;
 
-	_broadcast( packet );
+	if ( isMoreThan2Clients ) {
+		_broadcast( packet );
+	}
+	else{ packetPool.add ( packet ); System.out.println( "[LOGGING] pushing new packet to the packetPool"); }
+
     }
 
     private void _broadcast ( Packet packet )
@@ -425,6 +435,26 @@ public class ClientHandler implements Runnable{
 	    }
 	}
     }
+
+    private static void sendMissingPackets ( ClientHandler instance, ArrayList<Packet> packets )
+    {
+
+	    // List<Entity> entities      = instance.get
+	    boolean isAnyMissingPacket = packets.size() != 0;
+	    boolean isMoreThan2Clients = clients.size()    > 1 ;
+
+	    if ( isAnyMissingPacket && isMoreThan2Clients )
+	    { 
+
+		    System.out.println( "[LOGGING] sending the missing packets" );
+		    for ( Packet packet : packets ) { _broadcast ( packet ); }
+
+		    packets.clear(); 
+	    }
+
+	    else return ;
+    }
+
 
     // like the client the client handler also has the mainLoop ( which is the run loop )
     // likewise think of it like the main game loop.

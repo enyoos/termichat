@@ -1,13 +1,1 @@
-add the exit msg, when user ctrl + c
-finish the command feature.
-
-cached :     private static String[] COMMANDS = {
-        "ping", "server_info", "list"
-    };
-
-check that out : https://javaalmanac.io/snippets/security/diffiehellmankeyagreement/
-
-    private static final String[] COMMANDS = { 
-        "list", "show", "ping"
-    };
-
+solve the problem of the javafx stuff ( the package is missing ), perhaps install the jdk || build a pattern ( obs pattern ).

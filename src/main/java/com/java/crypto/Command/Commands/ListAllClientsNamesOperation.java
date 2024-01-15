@@ -15,6 +15,7 @@ public class ListAllClientsNamesOperation implements Action{
     @Override
     public void execute() {
 
+	System.out.println( "[LOGGING] sending the command /list" );
         String msg = "list";
         PACKET_TYPE type = PACKET_TYPE.RESPONSE;
         Packet packet = new Packet(msg, type);

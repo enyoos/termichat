@@ -1,6 +1,7 @@
 package com.java.crypto;
 
 import java.util.Scanner;
+import static com.java.crypto.Encryption.Utils.*;
 
 /**
  * Hello world!
@@ -8,7 +9,7 @@ import java.util.Scanner;
  */
 public class App 
 {
-    private static final Scanner scanner = new Scanner(System.in);
+    public static final Scanner scanner = new Scanner(System.in);
 
     public static void main( String[] args )
     {
@@ -31,9 +32,28 @@ public class App
         // now back to the main thread
         // we will run the client
         int PORT = 5055;
-        String prompt = "What's your username ? : ";
-        System.out.print( prompt );
-        String clientName = scanner.nextLine();
-        Client client = new Client(clientName, PORT);
+	
+
+        Client client = new Client(promptUsername(), PORT);
+    }
+
+    public static String promptUsername ( )
+    {
+
+	boolean writing   = true;
+	String clientName = "";
+	String prompt     = "What's your username ? : ";
+
+	while ( writing ){
+
+		System.out.print( prompt );
+		clientName = scanner.nextLine();
+
+		if ( correctNameNomenclature ( clientName ) ) break;
+		else { System.out.println( "[ERROR] incorrect name. Your name must be in ascii letters only, " + 
+				"without special characters and containing atleast 4 characters." ); continue; }
+	}
+
+	return clientName;
     }
 }

@@ -53,8 +53,8 @@ public class Packet {
                 type = PACKET_TYPE.CONNECT;
                 break;
 
-            case 2:
-                type = PACKET_TYPE.SEND; 
+            case -2:
+                type = PACKET_TYPE.BROADCAST; 
                 break;
 
             case -4:
@@ -68,6 +68,14 @@ public class Packet {
             case 4:
                 type = PACKET_TYPE.KEY;
                 break;
+		
+	    case 5:
+		type = PACKET_TYPE.REPEAT;
+	        break;
+
+	    case 6:
+		type = PACKET_TYPE.OK;
+		break;
 
             default:
                 break;
@@ -94,5 +102,7 @@ public class Packet {
 
     // OVERRRIDES
     @Override
-    public String toString( ) { return "msg : " + Utils.bytes2Str(msg) + " // type: " + type.getValue();}
+    public String toString( ) {
+	    return "{length : " + this.msg.length + ", type: " + type.getValue() + "}";
+    }
 }

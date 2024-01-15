@@ -8,6 +8,7 @@ import com.java.crypto.Packet.Packet;
 
 // the Receive class ( performs the actual actions )
 public class Sender {
+
     private OutputStream os; 
     public Sender(){}
     public Sender( OutputStream os ) { this.os = os;}

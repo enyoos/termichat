@@ -3,19 +3,19 @@ package com.java.crypto.Command.Commands;
 import com.java.crypto.Client;
 import com.java.crypto.Command.Action;
 import com.java.crypto.Command.Sender;
+import com.java.crypto.Client;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
+import static com.java.crypto.Encryption.Utils.*;
 
-// use
-// /help -c ( --command ) <name of the command ( / /w / )>
+
 public class ShowAllCommandsOperation implements Action{
 
-    private static final String DELIMITER = "------------------";
-    private static final String COMMAND_PARTICULAR_FLAG = "-c";
+    private static final String DELIMITER                = "------------------";
+    private static final String COMMAND_PARTICULAR_FLAG  = "-c";
     private static final String COMMAND_PARTICULAR_FLAGG = "--command";
-    private String commandInParticular = "";
-    private Sender sender;
-    private static final String[] COMMANDS_DESCRIPTION = {
+    private String commandInParticular                   = "";
+    private static final String[] COMMANDS_DESCRIPTION   = {
         "ping            pings the server and returns pong!",
         "sever_info      returns the name of the server    ",
         "list            returns list of all the users in the group chat.",
@@ -24,6 +24,7 @@ public class ShowAllCommandsOperation implements Action{
         "help            shows all the commands, or details a particular command    (-c)"
     };
 
+    private Sender sender;
     public ShowAllCommandsOperation(){}
     public ShowAllCommandsOperation( Sender sender, String input )
     {
@@ -33,7 +34,7 @@ public class ShowAllCommandsOperation implements Action{
 
     public void parseInput(String input)
     {
-        String[] tokens = input.split(" ");
+        String[] tokens               = input.split(" ");
         boolean isCommandInParticular = false;
 
         for ( String token : tokens )
@@ -80,7 +81,9 @@ public class ShowAllCommandsOperation implements Action{
                 }
             }
             else { 
-                System.out.println("The command specified as an argument doesn't exist. Maybe you meant : " + "...");
+                System.out.println("The command specified as an argument doesn't exist. Maybe you meant : " + lev ( this.commandInParticular, Client.COMMANDS ) );
+
+		return; // exit the function ...
             }
        }
 
