@@ -44,6 +44,26 @@ public final class Utils {
     private static final String DEFAULT_ALGO = "RSA";
     private static final Random random        = new Random();
 
+	public static boolean compare( byte[] bytes1, byte[] bytes2 )
+	{
+		int length1 = bytes.length;
+		int length2 = bytes.length;
+
+		if ( length1 != length2 ) return false;
+		
+		for ( byte b : bytes1 )
+		{
+			for ( byte b_ : bytes2 )
+			{
+				if ( b == b_ ) continue    ;
+				else           return false;
+			}
+		}
+		
+		return true;
+
+	}
+
     public static int getCorrectType ( byte[] array )
     {
         if ( array[array.length-1] != 0 ) return  ( int ) array[array.length-1];
@@ -140,12 +160,20 @@ public static int modPow ( int value, int g, int p ) { return ( (int)  Math.pow 
 	// 10 rounds for 128-bit keys.
 	// 12 rounds for 192-bit keys.
 	// 14 rounds for 256-bit keys.
-	
-	    BigInteger n = new BigInteger ( "27425479482750425052411308473799907881733956615995983604272760532752549886132188364177979682577637933682739157874614381139479324114205608822767804668030183777117212364720120437596396536521575673359676545490396298516702713135935003205818850321505845292881232654195070265215164909210247813280087445648457823509850033545776068495763859886627235335758321902561009282329416584312780131074195360947977983110793747142184327085584127714893377326384542209243309186960601920489936193440448428179859642038022647156899498217504893326117005948316948819913925241178630711303972544238391627138895162174451434461344485209534941428281" );
-	    byte[] bytes = cropBigIntBy ( 16, n );
+		byte[] arr  = {55,55,55,65};
+		byte[] arr2  = {55,55,55,65};
 
-	    BigInteger n2= new BigInteger ( bytes );
-	    System.out.println( "result > " + n2 );	    
+		System.out.println( compare( arr, arr2 ) );
+
+	    // BigInteger n = new BigInteger ( "27425479482750425052411308473799907881733956615995983604272760532752549886132188364177979682577637933682739157874614381139479324114205608822767804668030183777117212364720120437596396536521575673359676545490396298516702713135935003205818850321505845292881232654195070265215164909210247813280087445648457823509850033545776068495763859886627235335758321902561009282329416584312780131074195360947977983110793747142184327085584127714893377326384542209243309186960601920489936193440448428179859642038022647156899498217504893326117005948316948819913925241178630711303972544238391627138895162174451434461344485209534941428281" );
+
+	    // BigInteger n2= new BigInteger ( bytes );
+	    // System.out.println( "result > " + n2 );	    
+
+
+		// byte[] arr2 = trimArrayByOne( arr );
+
+		// System.out.println( Arrays.toString (arr2) );
     }
 
 
@@ -190,7 +218,7 @@ public static int modPow ( int value, int g, int p ) { return ( (int)  Math.pow 
 	}
 
 
-	private static byte[] concatArray ( byte[] b1, byte[] b2 ) 
+	public static byte[] concatArray ( byte[] b1, byte[] b2 ) 
 	{
 		int length = b1.length + b2.length;
 		byte[] ret = new byte[length];
@@ -207,6 +235,7 @@ public static int modPow ( int value, int g, int p ) { return ( (int)  Math.pow 
 
 		return ret;
 	}
+	
 
 public static BigInteger gKey ( int bit ) { return BigInteger.probablePrime ( bit, new Random() ); }
 
@@ -405,6 +434,19 @@ public static byte[] cropBigIntBy ( int bit, BigInteger N )
         for ( int i = 0; i < l; i ++ ) { ret[i] = bytes[i]; }
         return ret;
     }
+
+	public static byte[] trimArrayByOne ( byte[] bytes )
+	{
+
+		byte[] ret = new byte[bytes.length-1];
+		for ( int i = 1, j = 0 ; i < bytes.length ; i ++)
+		{
+			ret[j] = bytes[i];
+			j ++;
+		}
+
+		return ret;
+	}
 
 	public static BigInteger mixKey ( BigInteger key, BigInteger G, BigInteger P ) { return key.modPow ( G, P ); }
 

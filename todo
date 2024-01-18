@@ -1,1 +1,4 @@
-solve the problem of the javafx stuff ( the package is missing ), perhaps install the jdk || build a pattern ( obs pattern ).
+solve the problem with duplication of the methods
+why not take advantage of pausing threads and interrupting them ?
+clean up the methods in the Utils.java file ( optimization ) .
+first send the key on connect ( when the client is freshly created ?) ?

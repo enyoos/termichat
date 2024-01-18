@@ -10,6 +10,7 @@ import static com.java.crypto.Encryption.Utils.*;
 public class App 
 {
     public static final Scanner scanner = new Scanner(System.in);
+    public static final int PORT = 5055;
 
     public static void main( String[] args )
     {
@@ -31,29 +32,26 @@ public class App
 
         // now back to the main thread
         // we will run the client
-        int PORT = 5055;
-	
 
         Client client = new Client(promptUsername(), PORT);
     }
 
     public static String promptUsername ( )
     {
+        boolean writing   = true;
+        String clientName = "";
+        String prompt     = "What's your username ? : ";
 
-	boolean writing   = true;
-	String clientName = "";
-	String prompt     = "What's your username ? : ";
+        while ( writing ){
 
-	while ( writing ){
+            System.out.print( prompt );
+            clientName = scanner.nextLine();
 
-		System.out.print( prompt );
-		clientName = scanner.nextLine();
+            if ( correctNameNomenclature ( clientName ) ) break;
+            else { System.out.println( "[ERROR] incorrect name. Your name must be in ascii letters only, " + 
+                    "without special characters and containing atleast 4 characters." ); continue; }
+        }
 
-		if ( correctNameNomenclature ( clientName ) ) break;
-		else { System.out.println( "[ERROR] incorrect name. Your name must be in ascii letters only, " + 
-				"without special characters and containing atleast 4 characters." ); continue; }
-	}
-
-	return clientName;
+        return clientName;
     }
 }

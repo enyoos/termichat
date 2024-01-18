@@ -1,3 +1,5 @@
 test_packet.bat
+target/
 todo
-serv
+*sh
+*bat

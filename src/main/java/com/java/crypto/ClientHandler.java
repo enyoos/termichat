@@ -37,8 +37,8 @@ public class ClientHandler implements Runnable{
 
     private static ArrayList<Entity> clients = new ArrayList<>();
     private static final int MAX_SIZE = 4096;
+    private int msgLength             = MAX_SIZE;
     private static String serverInstanceName;
-    private int msgLength = MAX_SIZE;
 
     private Entity client;
 
@@ -50,35 +50,48 @@ public class ClientHandler implements Runnable{
 
     public ClientHandler( Socket socket ) {
 
+        System.out.println( "[LOGGING] new clientHandler..." );
         client = new Entity(socket);
 
-	// each time we add some clients to the client array
-	// we send all the missed packet
+        // each time we add some clients to the client array
+        // we send all the missed packet
         clients.add(client);
 
-	// what's the plan ?
-	// make the clients array an observable
-	// such that on change we send a missing packet.
+        // what's the plan ?
+        // make the clients array an observable
+        // such that on change we send a missing packet.
 
 
         try {
 
             is = socket.getInputStream();
             os = socket.getOutputStream();
-            
-            // also at the begining of the connection the client will send us his keys
-            receivePacket();
-
-            // at the begining of the connection the client will send us his username
-            // but b4 let's receive the msgLength ( i.e the length of the byte array )
-            receivePacket();
-            
+           
         }catch( IOException e ){ System.out.println( "Couldn't handle the client request."); }
     }
 
 
 
     public static void setServerInstanceName ( String name ) { ClientHandler.serverInstanceName = name;}
+
+
+    public void emitCacheSignal ( Packet packet )
+    {
+	    System.out.println( "[LOGGING] emitting cache signal with value : " + packet );
+	    _emitCacheSignal ();
+    }
+
+    public void _emitCacheSignal ()
+    {
+	    // returns ( intact the packet sent ) back to the client;
+
+
+            PACKET_TYPE type = PACKET_TYPE.CACHE; 
+	    String      msg  = "CACHE SIGNAL";
+	    Packet packet    = new Packet ( msg, type );
+
+	    sendPacket ( packet );
+    }
 
     public void receivePacket ()
     {
@@ -146,7 +159,6 @@ public class ClientHandler implements Runnable{
     }
 
 	private void handleUnknownPacket ( Packet packet ) { System.out.println( "[LOGGING] packet unknown info : " + packet ); }
-
     private void handleKeyExchange( Packet packet ) { broadcast ( packet ); }
     
     // special request from the client
@@ -219,11 +231,11 @@ public class ClientHandler implements Runnable{
         StringBuilder sb = new StringBuilder();
 
         sb.append("\n" + DELIMITER);
-        for ( Entity client : clients )
+        for ( Entity client_ : clients )
         {
-            if ( client == this.client )
-            { sb.append(String.format ( "- %s ( you )\n", client.getName())); }
-            else sb.append(String.format("- %s\n", client.getName()));
+            if ( client_ == this.client )
+            { sb.append(String.format ( "- %s ( you )\n", this.client.getName())); }
+            else sb.append(String.format("- %s\n", client_.getName()));
         }
         sb.append(DELIMITER);
 
@@ -241,10 +253,7 @@ public class ClientHandler implements Runnable{
         // getting the place of the name in the usernames array;
         int idx = clients.indexOf(client);
 
-        if ( idx > 0 )
-        {
-            clients.remove(idx);
-        }
+        if ( idx >= 0 ) { clients.remove(idx); }
         else { return ; }
     }
 
@@ -351,16 +360,24 @@ public class ClientHandler implements Runnable{
     // need to refactor the isUserExist, so instead just created another function
     private boolean isUsernameCurrentlyUsed ( String name )
     {
-        for ( Entity client : clients )
-	{
-		if ( client != this.client && client.getName ( ).equals( name ) ) return true;   
-		else continue;
-	}
+        if ( clients.size() == 1 ) return false;
+        else {
+            for ( Entity client : clients )
+            {
+                if ( client != this.client && client.getName ( ).equals( name ) ) return true;   
+                else continue;
+            }
+            return false;
+        }
 
-	return false;
     }
 
-    private void handleBroadcastEvent( Packet packet ) { broadcast(packet); }
+    private void handleBroadcastEvent( Packet packet ) {
+        boolean otherClients = this.clients.size() > 1;
+
+        if ( otherClients ) { broadcast(packet); }
+        else                _emitCacheSignal() ;
+    }
 
     // to refactor ( like the whole file )
     private void sendPacket ( Packet packet ){
@@ -375,29 +392,30 @@ public class ClientHandler implements Runnable{
     // i.e broadcasting to every client that the current user joined the gc
     private void handleConnectEvent ( Packet packet )
     {
+        System.out.println( "[LOGGING] handling connection event" );
         // the connect packet will contain the name of curr client
-	// check if that username is unique
-	String name = packet.getMsg();
+        // check if that username is unique
+        String name = packet.getMsg();
 
 
-	if ( isUsernameCurrentlyUsed( name ) )
-	{
-		Packet err = new Packet ( "[ERROR] The name : (" + name + ") is already in use. Retry again.", PACKET_TYPE.REPEAT); 
+        if ( isUsernameCurrentlyUsed( name ) )
+        {
+            Packet err = new Packet ( "[ERROR] The name : (" + name + ") is already in use. Retry again.", PACKET_TYPE.REPEAT); 
+            System.out.println( "[LOGGING] name already in use, sending ERROR packet" );
+            sendPacket( err );
+        }
+        else{
+            // TELLING THE CLIENT THAT THE USERNAME IS GOOD
+            
+            Packet ok = new Packet ( "OK!", PACKET_TYPE.OK );
+            sendPacket ( ok );
 
-		System.out.println( "[LOGGING] name already in use, sending ERROR packet" );
-	        sendPacket( err );
-	}
-	else{
-		// TELLING THE CLIENT THAT THE USERNAME IS GOOD
-		Packet ok = new Packet ( "OK!", PACKET_TYPE.OK );
-		sendPacket ( ok );
+            client.setName(name);
+            String greetingAnnoucement = String.format ("%s joined the chat!", client.getName());
+            packet.setMsg(greetingAnnoucement);
 
-		client.setName(name);
-		String greetingAnnoucement = String.format ("%s joined the chat!", client.getName());
-		packet.setMsg(greetingAnnoucement);
-		
-		broadcast(packet)   ;
-	}
+            broadcast(packet) ;
+        }
     }
 
     // sending to all the clients the msg of the current client;
@@ -406,24 +424,25 @@ public class ClientHandler implements Runnable{
         byte[] bytes;
         OutputStream os ;
 
-	_broadcast( packet );
+        // first check if there's another client ( i.e two or more )
+        _broadcast( packet );
     }
 
     private void _broadcast ( Packet packet )
     {
-	for ( Entity client : clients )
-	{
-	    if ( client != this.client )
-	    {
-		try {
-		    client.getSocket().getOutputStream().write( packet.output() );
-		    client.getSocket().getOutputStream().flush()                 ;
-		}
-		catch( IOException e ) {
-		    System.out.println("[ERROR], couldn't broadcast the message.");
-		}
-	    }
-	}
+        for ( Entity client : clients )
+        {
+            if ( client != this.client )
+            {
+                try {
+                    client.getSocket().getOutputStream().write( packet.output() );
+                    client.getSocket().getOutputStream().flush()                 ;
+                }
+                catch( IOException e ) {
+                    System.out.println("[ERROR], couldn't broadcast the message.");
+                }
+            }
+        }
     }
 
     // like the client the client handler also has the mainLoop ( which is the run loop )

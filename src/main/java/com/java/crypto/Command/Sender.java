@@ -1,14 +1,15 @@
 package com.java.crypto.Command;
+import com.java.crypto.Client  ;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
 import com.java.crypto.Packet.Packet;
 
-
 // the Receive class ( performs the actual actions )
 public class Sender {
 
+    public Client client   ;
     private OutputStream os; 
     public Sender(){}
     public Sender( OutputStream os ) { this.os = os;}

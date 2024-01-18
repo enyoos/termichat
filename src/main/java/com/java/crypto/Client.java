@@ -26,7 +26,7 @@ import javax.crypto.spec.SecretKeySpec  ;
 
 public class Client {
 
-    private static final long TIME_OUT       = 1000;
+    private static final long TIME_OUT       = 500;
     public static String[] COMMANDS          = {
         "ping", "server_info", "list", "exit","dm","help"
     };
@@ -38,25 +38,24 @@ public class Client {
     private BigInteger MIXED_KEY                    ;
     private static final Scanner scanner     = new Scanner(System.in);
     private static final Random  random      = new Random ();
-    private static final int MAX_BYTE_RECV   = 1024;
-    private static final BigInteger G        = new BigInteger ( "29477216248556571790188355105958421171017588675856077450982938565960829212013054309462070998391461094041831402145531512255212461711077147264591937559444025009276513139697905405362311715793483901079228943997043492071835753652280403690828672211623822204487686701542659932108817401902465502854674782655107704489715333636274537660725752397542128190204586783024276096660727817435884944669373187891992147367420696864345419030748867924233115063034424369413695996037194187915663302698301730217385865205733532876034279732307130146367186464815516016177746732081584886750880459484847733607088734405196106390759788696569480087431" );
-    private static final BigInteger P        = new BigInteger ( "19474466331652733655832051458553385064043212458095124200912009294819345895972189505915769512313480865923793313340501916953015584166532313103740069387851835022945716114704862091376298763276441380923154722122437014796553689749812134516963749832403414532662243582453368471573597878812661606345274421114769635444409570652211078130819498231470427749591748807061847547957719205965753895170094138164528351514966602849951310091191492513611565485056820930462260513041657995223151734292549103405648018769834599247783995393243168507371182616792568116715228533111095312406381801789553091907467985780343386183520134766937438245637" );
-
-
+    private static final int MAX_BYTE_RECV   = 4096;
+    private static final int SIZE_KEY_BIT    = 2048;
 
     // ------
     // for now let's make the P and G values client-side
     // convert them to the adequate class when doing the rsa e    ncryption
     // ------
-   
-    private SecretKey sk                       ;
-    private BigInteger diffieKey               ;
-    private InputStream is                     ; // channel where you can read from
-    private OutputStream os                    ; // chanel where you can write from
-    private Sender sender                      ; // this is essential to the command pattern
-    private Socket socket                      ;
-    private String name                        ;
+    private static final BigInteger G        = new BigInteger ( "29477216248556571790188355105958421171017588675856077450982938565960829212013054309462070998391461094041831402145531512255212461711077147264591937559444025009276513139697905405362311715793483901079228943997043492071835753652280403690828672211623822204487686701542659932108817401902465502854674782655107704489715333636274537660725752397542128190204586783024276096660727817435884944669373187891992147367420696864345419030748867924233115063034424369413695996037194187915663302698301730217385865205733532876034279732307130146367186464815516016177746732081584886750880459484847733607088734405196106390759788696569480087431" );
+    private static final BigInteger P        = new BigInteger ( "19474466331652733655832051458553385064043212458095124200912009294819345895972189505915769512313480865923793313340501916953015584166532313103740069387851835022945716114704862091376298763276441380923154722122437014796553689749812134516963749832403414532662243582453368471573597878812661606345274421114769635444409570652211078130819498231470427749591748807061847547957719205965753895170094138164528351514966602849951310091191492513611565485056820930462260513041657995223151734292549103405648018769834599247783995393243168507371182616792568116715228533111095312406381801789553091907467985780343386183520134766937438245637" );
 
+    private SecretKey sk         ;
+    private BigInteger tempSk    ;
+    private BigInteger diffieKey ;
+    private InputStream is       ; // channel where you can read from
+    private OutputStream os      ; // chanel where you can write from
+    private Sender sender        ; // this is essential to the command pattern
+    private Socket socket        ;
+    private String name          ;
 
     public Client(){}
     public Client ( String name, int port )
@@ -64,113 +63,109 @@ public class Client {
         try {
             this.name=name;
             this.socket = new Socket(DEFAULT_HOST, port);
-            this.socket.setTcpNoDelay(true);
 
-            is     = socket.getInputStream();
-            os     = socket.getOutputStream();
-            sender = new Sender(os);
-        
-            // generate the pk only !
-            // the sk will be computed thanks to the diffie hellman exchange.
-	    this.genKey();
+            is             = socket.getInputStream();
+            os             = socket.getOutputStream();
+            sender         = new Sender(os);
 
-            mainLoop();
+            this.genKey();
+            mainLoop()   ;
+
         }catch( IOException err ) {
             exitAppOnServerShutDown();
         }
     }
 
-    private void sendKey ( )
-    {
-	    // you broadcast your key thanks
-	    // bfore even sending your name
-	    System.out.println("[CLIENT] sending the mixed key to the server.");
-	    byte[] bytes   = this.MIXED_KEY.toByteArray() ;
-	    Packet firstDefaultPacket = new Packet( bytes , PACKET_TYPE.KEY);
-
-	    // sending the content of the packet 
-	    sendPacket ( firstDefaultPacket );
-    }
-
     private void sendNamePacket ( )
     {
 
-    // as you can see we're not encrypting the name sent.
-    // in order to remove the slight overhead.
+        // as you can see we're not encrypting the name sent.
+        // in order to remove the slight overhead.
         System.out.println("[CLIENT] sending the name to the server and other parties.");
         Packet SecondDefaultPacket = new Packet(name, PACKET_TYPE.CONNECT);
+
         sendPacket(SecondDefaultPacket);
+    
+        // we should receive OK or ERR
+        receivePacket();
 
-	// we should listen for the output.
-	receivePacket ();
     }
-
 
     private void sleepClient ( long st )
     {
-	try{
-		Thread.sleep ( TIME_OUT );
-	}catch ( InterruptedException e ) { System.out.println( "unpatient" ); }
-    }
-
-
-    private void sendNameAndKey ( )
-    {
-
-	// then when the key exchange is finished, send the username.
-        sendKey();
-
-	// for some reason the server can't read the key
-	// only if I sleep here.
-	// for like 2 s before sending the name.
-
-	sleepClient ( 2000 );
-
-	// firstly, we notify the server of our name,
-        // using the CONNECT packet
-        sendNamePacket();
-
+        try{
+            Thread.sleep ( st );
+        }catch ( InterruptedException e ) { System.out.println( "unpatient" ); }
     }
 
     // this the main loop
     // think of it like the main Game Loop
     public void mainLoop()
     {
-	
-	sendNameAndKey ();
+        // sedning also the key
+        // sendKey();
+
+        // sendNameAndKey ();
+        sendNamePacket ();
         inputTask      ();
 
         while( this.socket.isConnected() ) { receivePacket(); }
     }
 
+    public void interruptThreadWithName ( String name )
+    {
+	    int MAX_SIZE     = 5;
+	    Thread[] threads = new Thread[MAX_SIZE];
+	    Thread.enumerate ( threads );
+
+	    for ( Thread t : threads ) { if ( t.getName().equals ( name ) ) { t.interrupt(); } }
+
+    }
+
+    private Packet encryptMsg ( String input )
+    {
+
+	    IvParameterSpec iv = generateIv ();
+	    String msg         = String.format ( "%s > %s", name, input );
+	    String digest      = encrypt  ( msg, sk, iv );
+	    byte[] send        = paddWithIv ( iv, digest ); // [iv, msg] ( padd operation )
+	    Packet packet      = new Packet(send, PACKET_TYPE.BROADCAST);
+
+	    return packet;
+    }
+
     // asks, while the program is running the input of the user
     public void inputTask ( )
     {
-        new Thread( new Runnable() {
+
+        String tname = "inputTask";
+        Thread t     = new Thread( new Runnable() {
             @Override
             public void run()
             {
 
-		String prompt   = name + " >";
-		boolean running = true       ;
-		String command  = ""         ;
-		Action command_ = null       ;
-		String input    = ""         ;
-		Packet packet   = null       ;
+                String prompt   = name + " >";
+                boolean running = true       ;
+                String command  = ""         ;
+                Action command_ = null       ;
+                String input    = ""         ;
+                Packet packet   = null       ;
 
                 while ( running )
                 {
-			if ( !RECEIVEDPACKET ){
-				promptUserForMsg ( prompt,
-						command,
-						command_,
-						input,
-						packet );
-			}
-			else continue;
+                    //if ( !RECEIVEDPACKET ){
+                        promptUserForMsg ( prompt,
+                                command,
+                                command_,
+                                input,
+                                packet );
+                    //}
+                //else continue;
                 }
             }
-        }).start();
+        }, tname);
+
+        t.start();
     }
 
     private void promptUserForMsg ( String context, String command, Action command_, String input, Packet packet )
@@ -248,31 +243,29 @@ public class Client {
 
     }
 
-    private Packet encryptMsg ( String input )
-    {
-
-	    IvParameterSpec iv = generateIv ();
-	    String msg         = String.format ( "%s > %s", name, input );
-	    String digest      = encrypt  ( msg, sk, iv );
-	    byte[] send        = paddWithIv ( iv, digest ); // [iv, msg] ( padd operation )
-	    Packet packet      = new Packet(send, PACKET_TYPE.BROADCAST);
-
-	    return packet;
-    }
-
     private void showNoSKWarning( )
-    { System.out.println( "[WARNING] You don't have a Secret key and this will result in unencrypted messages. You must wait for someone to join the room." ); }
+    { 
+	    // pause the thread
+	    System.out.println( "[WARNING] You don't have a Secret key and this will result in unencrypted messages. You must wait for someone to join the room." );
+    }
 
     // handling the events.
-    private void handleResponseEvent ( Packet packet ) { System.out.println( packet.getMsg() )                  ;}
+    private void handleDisconnectEvent ( Packet packet ) { System.out.println( packet.getMsg() )                ;}
     private void handleInvalidUsernameEvent ( Packet packet ) {
 
-	    handleResponseEvent( packet );
-	    this.name = promptUsername() ;
-	    sendNamePacket ()            ;
+	    // interrrupt the key receival
+	    // and also interrupt the inputTask
+	    
+	    // interruptThreadWithName ( "sendNameAndKeyTask" );
+	    // interruptThreadWithName ( "inputTask"          );
+	    handleResponseEvent     ( packet               );
 
+	    this.name = promptUsername();
+
+	    // how about we use the Thread.wait functionality ?
+	    // sendNameAndKey     ();
+	    // inputTask()          ;
     }
-    private void handleDisconnectEvent ( Packet packet ) { System.out.println( packet.getMsg() )                ;}
     private void handleBroadcastEvent  ( Packet packet ) {
 
 	    byte[] bytes= packet.getMsg_()                             ;
@@ -283,22 +276,114 @@ public class Client {
 	    String dec         = decrypt ( bytes2Str ( msg ), this.sk, iv );  
 	    System.out.println( dec );
     }
+    private void handleDefaultUnknownPacketEvent ( Packet packet ) { System.out.println( "[LOGGING] received unknown packet : " + packet ); }
 
-    private void handleDefaultUnknownPacketEvent ( Packet packet )
-    { System.out.println( "[LOGGING] received unknown packet : " + packet ); }
+    private static final byte[] hasSK    = {1};
+    private static final byte[] notHasSk = {0};
 
-    private void handleKeyEvent ( Packet packet ) {
-	    System.out.println( "[LOGGING] handling the KEY event" );
-	    setKey ( packet );
+    private void sendKey ( )
+    {
+	    // you broadcast your key thanks
+	    // bfore even sending your name
+	    System.out.println("[CLIENT] sending the mixed key to the server.");
+	    byte[] bytes   = this.MIXED_KEY.toByteArray() ;
+        boolean hasSK_ = this.sk != null;
+
+        if ( hasSK_ ) bytes = concatArray ( hasSK, bytes );
+        else          bytes = concatArray ( notHasSk, bytes );
+
+	    Packet firstDefaultPacket = new Packet( bytes , PACKET_TYPE.KEY);
+
+        sendPacket ( firstDefaultPacket );
     }
 
-    private void handleConnectEvent( Packet packet ) { 
+
+    public void setKey ( byte[] recKey )
+    {
+
+        this.tempSk       = new BigInteger ( recKey ).modPow ( this.diffieKey, P );
+        byte[] bytes      = cropBigIntBy ( 16, this.tempSk);
+        this.sk           = new SecretKeySpec ( bytes , ALGORITHM );
+        System.out.println( "[LOGGING] generating new secret key : " + this.tempSk );
+	    
+    }
+
+    private void handleKeyEvent ( Packet packet ) {
+
+        byte[] bytes   = packet.getMsg_();
+
+        // read the first byte
+        byte firstByte = bytes[0];
+
+        switch ( firstByte )
+        {
+            case 1:
+
+                // that means that the other client has a secret key
+                System.out.println( "The other client has a secret key" );
+                setKey(trimArrayByOne ( bytes ) );
+                break;
+
+            case 0:
+
+                // that means that the other client dont have a secret key
+                setKey (trimArrayByOne( bytes ) );
+                // updateKey();
+                // check if the key received is the same diffie as us
+                // meaning ( we alredy did the exchange )
+                if ( compare( trimArrayByOne( bytes ), this.diffieKey ) ) sendKey();
+                else                                                      System.out.println( "already did the exchange" );                    
+                break;
+
+            default:
+                System.out.println( "[WARNING] leading byte unsupported during the key exchange" );
+                break;
+        }
+
+    }
+
+    // we shouldn't renew, rather update the keys ( the secret keys becomes the newly mixed key )
+    private void updateKey ()
+    {
+        System.out.println( "[LOGGING] updating the keys ..." );
+
+        // our new diffieKey becomes the secret
+        boolean hasSk = this.tempSk != null;
+        if ( hasSk ) this.diffieKey  = this.tempSk;
+
+        genMKey();
+
+        this.sk     = null;
+        this.tempSk = null;
+
+        System.out.println( "the diffie (updating) : " + this.diffieKey );
+
+        this.sendKey();
+    }
+
+    // generates the mixed Key from an initial key
+    private void genMKey( ) { this.MIXED_KEY = this.G.modPow ( this.diffieKey, P ); }
+
+    public void genKey ( )
+    {
+        this.diffieKey = gKey ( SIZE_KEY_BIT );
+        genMKey();
+    }
+
+    private void handleConnectEvent( Packet packet ) 
+    { 
+        // we should ``update`` the key.
+        updateKey();
+
+	    // send missing packet when someone joins the rooms
+	    // sendMissingPackets();
 
 	    String uncMsg = packet.getMsg();	    
 	    System.out.println( uncMsg );
 
     }
-    private void handleOKEvent ( Packet packet ) { System.out.println( "[SERVER] 200 OK!" ); }
+    private void handleResponseEvent ( Packet packet ) { System.out.println( packet.getMsg() );}
+    private void handleOKEvent ( Packet packet ) { System.out.println( "[SERVER] 200 OK!" )   ;}
 
     private void receivePacket( )
     {
@@ -334,6 +419,8 @@ public class Client {
                     break;
 
 		case CONNECT:
+		    // ON CONNECT ( meaning a new client joined )
+		    //
 		    handleConnectEvent    ( packet );
 		    break;
 
@@ -348,54 +435,20 @@ public class Client {
 		    handleBroadcastEvent( packet ); 
 	            break;
 
-		    // we receive the key from the other user
-                    // which in theory should be the mixed key
-                    // we should take that mixed key and put modPow it.
+                // we receive the key from the other user
+                // which in theory should be the mixed key
+                // we should take that mixed key and put modPow it.
                 case KEY: 
                     handleKeyEvent( packet );
                     break;
 
                 default:
-		    handleDefaultUnknownPacketEvent ( packet );
+                    handleDefaultUnknownPacketEvent ( packet );
                     break;
             }
 
         }catch ( IOException e ){ exitAppOnServerShutDown(); }
     }
-
-
-    private BigInteger lastSeenKey = new BigInteger ( "0" );
-
-    public void setKey ( Packet packet )
-    {
-
-	    BigInteger recKey = new BigInteger ( packet.getMsg_() ); // OTHER'S KEY
-	    BigInteger ourKey = this.diffieKey ; // OUR KEY
-
-	    byte[] bytes           = cropBigIntBy ( 16, recKey.modPow ( ourKey, P ));
-
-	    this.sk = new SecretKeySpec ( bytes , ALGORITHM );
-	    System.out.println( "[LOGGING] generating new secret key : " + this.sk );
-
-	    // then send our key to the server
-	    if ( ! lastSeenKey.equals ( recKey ) ) { sendKey (); } 
-	    else { System.out.println( "[LOGGING] this key is already in my book" ); }
-
-	    
-	    lastSeenKey = recKey;
-    }
-
-    public void genKey ( )
-    {
-	int lengthKey  = 2048;
-	this.diffieKey = gKey ( lengthKey );
-        this.MIXED_KEY = this.G.modPow ( this.diffieKey, P );
-	int length     = this.MIXED_KEY.bitLength();
-
-	System.out.println( "[LOGGING] generated diffie key with value : " + this.diffieKey + " and length " + lengthKey );
-	System.out.println( "[LOGGING] generated the mixed key with value : " + this.MIXED_KEY + " and length " + length);
-    }
-
 
     // the client can : SEND_PACKETS ( MSG to the server );
     private void sendPacket ( Packet packet )
@@ -408,6 +461,7 @@ public class Client {
 
             os.write(packet.output());
             os.flush();
+
         }
         catch ( IOException e )
         { 

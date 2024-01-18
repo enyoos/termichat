@@ -1,2 +1,2 @@
 @echo off
-mvn package && mvn exec:java
+mvn package compile && mvn exec:java

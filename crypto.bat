@@ -1,2 +1,2 @@
 @echo off
-mvn compile && java -cp target/classes com.java.crypto.Encryption.Utils
+mvn package && java -cp target/classes com.java.crypto.Encryption.Utils

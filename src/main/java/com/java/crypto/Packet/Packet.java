@@ -77,6 +77,9 @@ public class Packet {
 		type = PACKET_TYPE.OK;
 		break;
 
+	    case 7:
+		type = PACKET_TYPE.CACHE;
+		break;
             default:
                 break;
         }
