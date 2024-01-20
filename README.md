@@ -4,14 +4,11 @@ simple, minimalistic chat app with java
 
 # Run
 
+## Just ( command specific, like ``make`` )
+https://just.systems/man/en/chapter_1.html
+
 ## Client
-### Linux
-``chmod +x client.sh && ./client
-### Windows
-``client.bat``
+``just client``
 
 ## Server
-### Linux
-``chmod +x server.sh && ./server``
-### Windows
-``server.bat``
+``just server``
