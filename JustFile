@@ -1,0 +1,13 @@
+# use cmd.exe instead of sh.
+set shell := ["cmd.exe", "/c"]
+
+
+# append with the @ notation in order to echo off.
+client:
+	@mvn package compile && mvn exec:java
+	
+server:
+	@mvn package && java -cp target/classes com.java.crypto.Server
+
+utils:
+	@mvn package && java -cp target/classes com.java.crypto.Encryption.Utils

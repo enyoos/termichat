@@ -1,4 +1,1 @@
-solve the problem with duplication of the methods
-why not take advantage of pausing threads and interrupting them ?
-clean up the methods in the Utils.java file ( optimization ) .
-first send the key on connect ( when the client is freshly created ?) ?
+always git add * when there's no error ( in that way, we can revert to the provious version if there's a FATAL and MYSTERIOUS error ).
