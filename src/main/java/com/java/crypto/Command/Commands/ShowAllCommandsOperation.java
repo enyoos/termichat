@@ -7,9 +7,10 @@ import com.java.crypto.Client;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 import static com.java.crypto.Encryption.Utils.*;
+import com.java.crypto.Command.Commands.Parseable;
 
 
-public class ShowAllCommandsOperation implements Action{
+public class ShowAllCommandsOperation implements Action, Parseable{
 
     private static final String DELIMITER                = "------------------";
     private static final String COMMAND_PARTICULAR_FLAG  = "-c";
@@ -18,10 +19,14 @@ public class ShowAllCommandsOperation implements Action{
     private static final String[] COMMANDS_DESCRIPTION   = {
         "ping            pings the server and returns pong!",
         "sever_info      returns the name of the server    ",
-        "list            returns list of all the users in the group chat.",
+        "list            returns list of all the users in the group chat.           (-l/limit of the users to show)",
         "exit            exits the group chat instance",
-        "dm              sends a private msg to some user                           (-m, -u)",
-        "help            shows all the commands, or details a particular command    (-c)"
+        "dm              sends a private msg to some user                           (-m/specify message, -u/specify user)",
+        "help            shows all the commands, or details a particular command    (-c/name of unique cmd)",
+        "info            shows all the information concerning the client ( you )",
+        "create          creates special group                                      (-n/name of the group chat)",
+        "listgc          shows all the groups currently active                      (-l/limit of the gc to show)",
+        "join            joins the specified group chat                             (-n/name of the group chat)"
     };
 
     private Sender sender;
@@ -29,10 +34,11 @@ public class ShowAllCommandsOperation implements Action{
     public ShowAllCommandsOperation( Sender sender, String input )
     {
         this.sender = sender;
-        this.parseInput(input);
+        this.parse(input);
     }
 
-    public void parseInput(String input)
+    @Override
+    public void parse(String input)
     {
         String[] tokens               = input.split(" ");
         boolean isCommandInParticular = false;
@@ -62,12 +68,16 @@ public class ShowAllCommandsOperation implements Action{
         if ( this.commandInParticular.isEmpty() )
         {
             // always add 12 space
-            sb.append(COMMANDS_DESCRIPTION[0]);
+            sb.append(""   + COMMANDS_DESCRIPTION[0]);
             sb.append("\n" + COMMANDS_DESCRIPTION[1]);
             sb.append("\n" + COMMANDS_DESCRIPTION[2]);
             sb.append("\n" + COMMANDS_DESCRIPTION[3]);
             sb.append("\n" + COMMANDS_DESCRIPTION[4]);
             sb.append("\n" + COMMANDS_DESCRIPTION[5]);
+            sb.append("\n" + COMMANDS_DESCRIPTION[6]);
+            sb.append("\n" + COMMANDS_DESCRIPTION[7]);
+            sb.append("\n" + COMMANDS_DESCRIPTION[8]);
+            sb.append("\n" + COMMANDS_DESCRIPTION[9]);
         }
         else 
         {
@@ -88,6 +98,7 @@ public class ShowAllCommandsOperation implements Action{
        }
 
 
+        sb.append( "\n" )   ;
         sb.append(DELIMITER);
 
         System.out.println(sb);

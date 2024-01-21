@@ -16,4 +16,7 @@ public final class Entity {
     public void setSocket( Socket socket ) { this.socket = socket; }
     public Socket getSocket ( ) { return this.socket; }
     public String getName ( ) { return this.name ;}
+
+    @Override
+    public String toString () { return "{ name : " + this.name + " }"; }
 }

@@ -1,26 +1,27 @@
 package com.java.crypto.Command.Commands;
 
-import com.java.crypto.Client;
-
 import com.java.crypto.Command.Action;
-import com.java.crypto.Command.Commands.Parseable;
+import com.java.crypto.Client;
 import com.java.crypto.Command.Sender;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
-public class ListAllClientsNamesOperation implements Action, Parseable{
-
+public class ShowAllGroupChatsOperation implements Action, Parseable
+{
     private static final String FLAG = "-l";
 
     private Sender sender;
     private Integer limit;
 
-    public ListAllClientsNamesOperation(){}
-    public ListAllClientsNamesOperation( Sender sender, String input ){ this.sender = sender; this.parse ( input );}
+    public ShowAllGroupChatsOperation (){}
+    public ShowAllGroupChatsOperation (Sender sender, String input) {
+        this.sender = sender;
+        parse ( input );
+    }
 
     @Override
-    public void parse ( String input ) {
-
+    public void parse( String input )
+    {
         String[] tokens = input.split ( " " );
         boolean isFlag  = false;
         Integer max     = null;
@@ -39,26 +40,30 @@ public class ListAllClientsNamesOperation implements Action, Parseable{
         }
 
         this.limit = max;
-
     }
 
     @Override
-    public void execute() {
+    public void execute()
+    {
 
         String msg;
         PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+        Packet packet;
 
-        if ( this.limit != null ) 
-        {
+        // TODO 
+        if ( limit != null ) {
+
             int limitValue = this.limit.intValue();
-            msg            = limitValue + "," + Client.COMMANDS[2];
+
+            msg            = limitValue + "," +  Client.COMMANDS[8];
+            packet         = new Packet ( msg, type );
         }
         else {
-            msg    = Client.COMMANDS[2];
+            msg    = Client.COMMANDS[8];
+            packet = new Packet ( msg, type );
+
         }
 
-        Packet packet = new Packet(msg, type);
-        this.sender.send(packet);
+        this.sender.send ( packet );
     }
-
 }

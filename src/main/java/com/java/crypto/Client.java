@@ -27,8 +27,9 @@ import javax.crypto.spec.SecretKeySpec  ;
 public class Client {
 
     private static final long TIME_OUT       = 500;
+    // the info command is for debugging purposes
     public static String[] COMMANDS          = {
-        "ping", "server_info", "list", "exit","dm","help"
+        "ping", "server_info", "list", "exit","dm","help", "info", "create", "listgc", "join"
     };
 
     private volatile boolean RECEIVEDPACKET  = false;
@@ -56,6 +57,13 @@ public class Client {
     private Sender sender        ; // this is essential to the command pattern
     private Socket socket        ;
     private String name          ;
+
+    // all the getters
+    public String getName          () { return this.name      ; }
+    public BigInteger getMK        () { return this.MIXED_KEY ; }
+    public BigInteger getDiffieKey () { return this.diffieKey ; }
+    public BigInteger getTempSk    () { return this.tempSk    ; }
+    public SecretKey getSk         () { return this.sk        ; }
 
     public Client(){}
     public Client ( String name, int port )
@@ -179,6 +187,7 @@ public class Client {
                     if ( input.isEmpty() ) { System.out.println("[ERROR] you need to say something, everyone is waiting ..."); }
                     else
                     {
+                        // we can compare the hash ?
                         if ( input.charAt(0) == COMMAND_DELIMITER )
                         {
                             command = input.substring(
@@ -198,7 +207,7 @@ public class Client {
                             }
                             else if ( command.equals(COMMANDS[2]) )
                             {
-                                command_ = new ListAllClientsNamesOperation( sender );
+                                command_ = new ListAllClientsNamesOperation( sender , input );
                                 command_.execute();
                             }
                             else if ( command.equals( COMMANDS[3]) )
@@ -219,12 +228,32 @@ public class Client {
                                 command_ = new ShowAllCommandsOperation(sender, input);
                                 command_.execute();
                             }
+                            else if ( command.equals(COMMANDS[6]) )
+                            {
+                                command_ = new ShowAllUserInformation( sender, this );
+                                command_.execute();
+                            } 
+                            else if ( command.equals(COMMANDS[7]) )
+                            {
+                                command_ = new CreateGroupOperation( sender, input );
+                                command_.execute();
+                            }
+                            else if ( command.equals(COMMANDS[8]) )
+                            {
+                                command_ = new ShowAllGroupChatsOperation( sender, input );
+                                command_.execute();
+                            }
+                            else if ( command.equals(COMMANDS[9]) )
+                            {
+                                command_ = new JoinGroupChatOperation( sender, input );
+                                command_.execute();
+                            }
                             else 
                             {
-				    String meantCmd = lev ( input, COMMANDS );
-				    System.out.println( 
-						    "[ERROR] this command doesn't exist. Did you mean " + meantCmd + " ?"
-				    );
+                                String meantCmd = lev ( input, COMMANDS );
+                                System.out.println( 
+                                        "[ERROR] this command doesn't exist. Did you mean " + meantCmd + " ?"
+                                );
                             }
                         }
                         else {
@@ -301,7 +330,9 @@ public class Client {
     public void setKey ( byte[] recKey )
     {
 
-        this.tempSk       = new BigInteger ( recKey ).modPow ( this.diffieKey, P );
+        BigInteger recKey_= new BigInteger ( recKey );
+        System.out.println( "received key : " + recKey_ );
+        this.tempSk       = recKey_.modPow ( this.diffieKey, P );
         byte[] bytes      = cropBigIntBy ( 16, this.tempSk);
         this.sk           = new SecretKeySpec ( bytes , ALGORITHM );
         System.out.println( "[LOGGING] generating new secret key : " + this.tempSk );
@@ -326,13 +357,15 @@ public class Client {
 
             case 0:
 
-                // that means that the other client dont have a secret key
                 setKey (trimArrayByOne( bytes ) );
+                // that means that the other client dont have a secret key
                 // updateKey();
                 // check if the key received is the same diffie as us
                 // meaning ( we alredy did the exchange )
-                if ( compare( trimArrayByOne( bytes ), this.diffieKey ) ) sendKey();
-                else                                                      System.out.println( "already did the exchange" );                    
+                if ( !compare( trimArrayByOne( bytes ), this.MIXED_KEY.toByteArray( ))) {
+                    sendKey();
+                }
+                else System.out.println( "already did the exchange" );                    
                 break;
 
             default:
@@ -349,34 +382,39 @@ public class Client {
 
         // our new diffieKey becomes the secret
         boolean hasSk = this.tempSk != null;
-        if ( hasSk ) this.diffieKey  = this.tempSk;
+        if ( hasSk ) 
+        {
+            System.out.println( "[LOGGING] assigning the diffie key to the secret key" );
+            this.diffieKey  = this.tempSk;
+        }
 
         genMKey();
 
         this.sk     = null;
         this.tempSk = null;
 
-        System.out.println( "the diffie (updating) : " + this.diffieKey );
-
         this.sendKey();
     }
 
     // generates the mixed Key from an initial key
-    private void genMKey( ) { this.MIXED_KEY = this.G.modPow ( this.diffieKey, P ); }
+    private void genMKey( ) { 
+        this.MIXED_KEY = this.G.modPow ( this.diffieKey, P );
+        System.out.println ( "generated the mixed key with value : " + this.MIXED_KEY );
+    }
 
     public void genKey ( )
     {
+
+        System.out.println( "generating a new key" );
         this.diffieKey = gKey ( SIZE_KEY_BIT );
         genMKey();
+
     }
 
     private void handleConnectEvent( Packet packet ) 
     { 
         // we should ``update`` the key.
         updateKey();
-
-	    // send missing packet when someone joins the rooms
-	    // sendMissingPackets();
 
 	    String uncMsg = packet.getMsg();	    
 	    System.out.println( uncMsg );
@@ -403,37 +441,37 @@ public class Client {
             switch (packet.getType()) {
 
                 // RESPONSE enum means the PRIVATE communication between the client and the server ( for instance )
-		// if the user wish to dump data from the server ( with the use of commands ).
-		// They're not encrypted
+                // if the user wish to dump data from the server ( with the use of commands ).
+                // They're not encrypted
 		
                 case RESPONSE:
-		    handleResponseEvent( packet );
+                    handleResponseEvent( packet );
                     break;
 
-		case OK:
-		    handleOKEvent( packet );
-		    break;
+                case OK:
+                    handleOKEvent( packet );
+                    break;
                 
                 case DISCONNECT:
-		    handleDisconnectEvent ( packet );
+                    handleDisconnectEvent ( packet );
                     break;
 
-		case CONNECT:
-		    // ON CONNECT ( meaning a new client joined )
-		    //
-		    handleConnectEvent    ( packet );
-		    break;
+                case CONNECT:
+                    // ON CONNECT ( meaning a new client joined )
+                    //
+                    handleConnectEvent    ( packet );
+                    break;
 
-		case REPEAT:
-		    handleInvalidUsernameEvent ( packet ); 
-		    break;
+                case REPEAT:
+                    handleInvalidUsernameEvent ( packet ); 
+                    break;
 
-		    // what is broadcasting
-		    // it is the communication between the users.
-		    // they shall be decrypted here ( on the client side )
-		case BROADCAST:
-		    handleBroadcastEvent( packet ); 
-	            break;
+                // what is broadcasting
+                // it is the communication between the users.
+                // they shall be decrypted here ( on the client side )
+                case BROADCAST:
+                    handleBroadcastEvent( packet ); 
+                    break;
 
                 // we receive the key from the other user
                 // which in theory should be the mixed key

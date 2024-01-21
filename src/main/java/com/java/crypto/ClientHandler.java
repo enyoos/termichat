@@ -6,6 +6,8 @@ import java.io.OutputStream;
 
 import java.util.ArrayList;
 import java.util.List     ;
+import java.util.Iterator ;
+import java.util.Optional ;
 import java.util.Arrays   ;
 
 import javax.crypto.spec.IvParameterSpec;
@@ -22,12 +24,12 @@ public class ClientHandler implements Runnable{
 
     // the list of commands
     private static final String[] COMMANDS = { 
-        "list", "server_info", "ping", "help"
+        "list", "server_info", "ping", "listgc"
     };
 
     // specific to each client.
     // instead how about we store them on the client side ?
-    // first check if there are some clients and then report ?
+    // first check if there are some DEFAULT_GROUP.clients and then report ?
 
     // update it at each iter ?
     // at each msg ?
@@ -35,12 +37,23 @@ public class ClientHandler implements Runnable{
 	    -30, 103, -50, -92, -70, 51, -94, 94, 90, 119, 116, -113, -116, 120, 23, -36
     });
 
-    private static ArrayList<Entity> clients = new ArrayList<>();
+    // we got the DEFAULT_GROUP
+    // there's also different groups 
+    private static final Group DEFAULT_GROUP     = new Group ("fossium", "default_global"); // fossium is me !
+    private static final ArrayList<Group> GROUPS = new ArrayList<>();
+
+    static {
+        GROUPS.add ( DEFAULT_GROUP ); 
+    }
+
+    // private static ArrayList<Entity> DEFAULT_GROUP.clients = new ArrayList<>();
     private static final int MAX_SIZE = 4096;
     private int msgLength             = MAX_SIZE;
     private static String serverInstanceName;
 
-    private Entity client;
+    private Entity client                   ;
+    private Group currentGrp = DEFAULT_GROUP;  // keep track of the current group
+    
 
 
     // receiving 
@@ -53,12 +66,12 @@ public class ClientHandler implements Runnable{
         System.out.println( "[LOGGING] new clientHandler..." );
         client = new Entity(socket);
 
-        // each time we add some clients to the client array
+        // each time we add some DEFAULT_GROUP.clients to the client array
         // we send all the missed packet
-        clients.add(client);
+        DEFAULT_GROUP.clients.add(client);
 
         // what's the plan ?
-        // make the clients array an observable
+        // make the DEFAULT_GROUP.clients array an observable
         // such that on change we send a missing packet.
 
 
@@ -70,28 +83,7 @@ public class ClientHandler implements Runnable{
         }catch( IOException e ){ System.out.println( "Couldn't handle the client request."); }
     }
 
-
-
     public static void setServerInstanceName ( String name ) { ClientHandler.serverInstanceName = name;}
-
-
-    public void emitCacheSignal ( Packet packet )
-    {
-	    System.out.println( "[LOGGING] emitting cache signal with value : " + packet );
-	    _emitCacheSignal ();
-    }
-
-    public void _emitCacheSignal ()
-    {
-	    // returns ( intact the packet sent ) back to the client;
-
-
-            PACKET_TYPE type = PACKET_TYPE.CACHE; 
-	    String      msg  = "CACHE SIGNAL";
-	    Packet packet    = new Packet ( msg, type );
-
-	    sendPacket ( packet );
-    }
 
     public void receivePacket ()
     {
@@ -105,9 +97,9 @@ public class ClientHandler implements Runnable{
             is.read(allocateBytesArray);
 
             packet = new Packet(allocateBytesArray);
-	    System.out.println( "[LOGGING] INCOMING PACKET : " + packet );
+            System.out.println( "[LOGGING] INCOMING PACKET : " + packet );
 
-	    PACKET_TYPE type = packet.getType ();
+            PACKET_TYPE type = packet.getType ();
 
             // according to its type
             // we take specific actions
@@ -139,14 +131,106 @@ public class ClientHandler implements Runnable{
                     handleKeyExchange( packet );
                     break;
 
+                case CREATE:
+                    handleGroupCreation( packet );
+                    break;
+
+                case JOIN:
+                    handleJoinEvent( packet );
+                    break;
+
                 default:
-		    handleUnknownPacket ( packet );
+                    handleUnknownPacket ( packet );
                     break;
             }
         }catch( IOException e ){
             // if we're here, meaning that the user disconnected
             handleDisconnectEvent(packet);
             // handleDisconnectEvent(packet);
+        }
+    }
+
+    private Optional<Group> gcPresent( String name )
+    {
+        for ( Group grp : GROUPS ) { if ( grp.name.equals ( name ) ) return Optional.of(grp); }
+        return Optional.empty();
+    }
+
+    private void handleJoinEvent( Packet packet )
+    {
+        String gcName       = packet.getMsg();
+        Optional<Group> opt = gcPresent ( gcName );
+
+        if ( opt.isPresent() ) 
+        {
+            // add the user to the group
+            // and remove him from the precedent group
+            // and broadcast disconnect packet to all the users 
+            Group joined = opt.get();
+            joined.clients.add( this.client );
+
+            this.currentGrp.clients.remove( this.client );
+            Group previousGrp = this.currentGrp;
+            this.currentGrp   = joined;
+
+            Packet mockPacket = new Packet( );
+
+            handleDisconnectEvent( mockPacket );
+
+            // let the user know that he joined a new group
+            // and broadcast his new arrival
+            Packet letDUserKnow = new Packet ( "You joined the gc : " + gcName, PACKET_TYPE.RESPONSE );
+            sendPacket ( letDUserKnow );
+
+            String msg = String.format ( "%s joined the group chat", this.client.getName() );
+            Packet letDOtherUsersKnow = new Packet ( msg, PACKET_TYPE.CONNECT );
+
+            broadcast( letDOtherUsersKnow );
+        }
+
+        else
+        {
+            String msg = String.format ( "[ERROR] the group chat with name : %s doesn't exist", gcName );
+            Packet packet_ = new Packet ( msg, PACKET_TYPE.RESPONSE );
+            
+            sendPacket ( packet_ );
+        }
+    }
+
+    private boolean gcNameUsed ( String name )
+    {
+        for ( Group group : GROUPS )
+        {
+            if ( group.name.equals ( name ) ) return true;
+            else continue;
+        }
+        
+        return false;
+    }
+
+    private void handleGroupCreation( Packet packet )
+    {
+        String gcName    = packet.getMsg() ;
+        String adminName = client.getName();
+
+        if ( !gcNameUsed ( gcName ) )
+        {   
+
+            Group grp        = new Group (adminName, gcName);
+            PACKET_TYPE type = PACKET_TYPE.OK           ;
+            String msg       = "[200] CREATED GroupChat";
+            Packet send      = new Packet ( msg, type );
+
+            GROUPS.add ( grp );
+            sendPacket ( send );
+        }
+        else {
+            sendPacket (
+                new Packet ( 
+                    "[ERROR] group chat name : " + gcName + " is already in use.",
+                    PACKET_TYPE.RESPONSE 
+                )
+            );
         }
     }
 
@@ -166,13 +250,32 @@ public class ClientHandler implements Runnable{
     private void handleQueryClient( Packet packet )
     {
 
-	System.out.println( "[LOGGING] handling query client" );
+        System.out.println( "[LOGGING] handling query client" );
         // gettigns the Command
-        String command = packet.getMsg();
+        String command       = packet.getMsg();
+        String optionalValue = "";
+        int limit            = GROUPS.size();
+        
+        if ( command.contains ( "," ) )
+        {
+            String[] values = splitAtFirstOccurenceOf( ",", command );
+            optionalValue   = values[0];
+            command         = values[1]; 
+        }
         
         // handling the list command
         if( command.equals(COMMANDS[0]))
-        { sendListOfUsersIncludingSelf( ); }
+        { 
+            if ( !optionalValue.isEmpty() ){
+                int temp          = Integer.parseInt ( optionalValue );
+                // by default we check if it is greater than the number
+                // of users in the DEFAULT GROUP
+                boolean outBounds = temp > GROUPS.get(0).clients.size();
+                limit             = outBounds ? GROUPS.get(0).clients.size() : temp;
+            }
+
+            sendListOfUsersIncludingSelf( limit ); 
+        }
 
         // handlign the server_info command
         else if ( command.equals(COMMANDS[1]))
@@ -181,10 +284,54 @@ public class ClientHandler implements Runnable{
         // handling the ping command
         else if ( command.equals(COMMANDS[2]))
         { sendPongMessageToClient(); }
+        
+        // handling the listgc commands
+        else if ( command.equals(COMMANDS[3]))
+        { 
+            if ( !optionalValue.isEmpty() ){ 
+
+                int temp          = Integer.parseInt(optionalValue);
+                boolean outBounds = temp > GROUPS.size();
+                limit             = outBounds ? GROUPS.size() : temp;
+            }
+
+            sendListOfGroupChats( limit ); 
+        }
 
         // do nothing, return nothing.
         else { return; }
 
+    }
+
+    // private static final Group DEFAULT_GROUP     = new Group ("default", "fossium"); // fossium is me !
+    // private static final ArrayList<Group> GROUPS = new ArrayList<>()               ;
+
+
+    private void sendListOfGroupChats(int limit)
+    {
+        Packet packet    = new Packet();
+        StringBuilder sb = new StringBuilder();
+        Group temp       = null;
+
+
+        sb.append(DELIMITER);
+        
+        for ( int i = 0; i < limit ; i ++ ) {
+
+            temp = GROUPS.get ( i );
+            sb.append ( "\n" + temp.toString() );
+
+            if ( temp == this.currentGrp ) sb.append (" (current)"); 
+            else continue;
+        }
+
+        sb.append("\n");
+        sb.append( DELIMITER );
+
+        packet.setMsg ( sb.toString() );
+        packet.setType( PACKET_TYPE.RESPONSE );
+
+        sendPacket ( packet );
     }
 
     private void sendPongMessageToClient()
@@ -222,19 +369,26 @@ public class ClientHandler implements Runnable{
         catch (IOException e ) { System.out.println("[ERROR] couldn't send the result of the command with value : " + COMMANDS[2]);}
     }
 
-
     private static final String DELIMITER = "------------------";
-    private void sendListOfUsersIncludingSelf( )
+
+    private void sendListOfUsersIncludingSelf( int limit )
     {
-	System.out.println( "[LOGGING] executing the /list command" );
         Packet packet = new Packet();
         StringBuilder sb = new StringBuilder();
 
         sb.append("\n" + DELIMITER);
-        for ( Entity client_ : clients )
+
+        // DEFAULT_GROUP.clients
+
+        for ( int i = 0; i < limit ; i ++ )
         {
+            Entity client_ = this.currentGrp.clients.get ( i );
             if ( client_ == this.client )
-            { sb.append(String.format ( "- %s ( you )\n", this.client.getName())); }
+            { 
+                sb.append(
+                    String.format ( "- %s ( you )\n", this.client.getName())
+                );
+            }
             else sb.append(String.format("- %s\n", client_.getName()));
         }
         sb.append(DELIMITER);
@@ -251,9 +405,9 @@ public class ClientHandler implements Runnable{
     private void removeUserByName ( Entity client )
     {
         // getting the place of the name in the usernames array;
-        int idx = clients.indexOf(client);
+        int idx = DEFAULT_GROUP.clients.indexOf(client);
 
-        if ( idx >= 0 ) { clients.remove(idx); }
+        if ( idx >= 0 ) { DEFAULT_GROUP.clients.remove(idx); }
         else { return ; }
     }
 
@@ -271,13 +425,33 @@ public class ClientHandler implements Runnable{
         removeUserByName(client);
         broadcast(packet);
 
-	closeCurrentCommunicationWithClient ();
+        closeCurrentCommunicationWithClient ();
+    }
+
+    private void genocideOf ( String clientName )
+    {
+        // get the iter out of the array List
+        // since arrayList doesn't allow for concurrent modif 
+        Iterator<Group> grpIter = GROUPS.iterator();
+        Group           temp    = null;
+
+        while ( grpIter.hasNext() )
+        {
+            temp = grpIter.next();
+            if ( temp.admin.equals(clientName) ) grpIter.remove();
+            else continue;
+        }
+
     }
 
     private void closeCurrentCommunicationWithClient ( )
     {
 	    try{
+
+            // remove every chat group that belong to the client
+            genocideOf ( this.client.getName() );
 		    System.out.println( "[LOGGING] aborting link with " + this.client.getName() );
+
 		    os.close ();
 		    is.close (); 
 
@@ -329,7 +503,7 @@ public class ClientHandler implements Runnable{
 
         Packet packet;
 
-        for ( Entity client : clients )
+        for ( Entity client : DEFAULT_GROUP.clients )
         {
             if ( client.getName().equals(name) )
             {
@@ -352,7 +526,7 @@ public class ClientHandler implements Runnable{
     private boolean isUserExist ( String name )
     {
         // first check if the targetUser is present in the group chat
-        for ( Entity client : clients )
+        for ( Entity client : DEFAULT_GROUP.clients )
         { if ( client.getName().equals(name) ) { return true; } }
         return false;
     }
@@ -360,9 +534,9 @@ public class ClientHandler implements Runnable{
     // need to refactor the isUserExist, so instead just created another function
     private boolean isUsernameCurrentlyUsed ( String name )
     {
-        if ( clients.size() == 1 ) return false;
+        if ( DEFAULT_GROUP.clients.size() == 1 ) return false;
         else {
-            for ( Entity client : clients )
+            for ( Entity client : DEFAULT_GROUP.clients )
             {
                 if ( client != this.client && client.getName ( ).equals( name ) ) return true;   
                 else continue;
@@ -372,12 +546,7 @@ public class ClientHandler implements Runnable{
 
     }
 
-    private void handleBroadcastEvent( Packet packet ) {
-        boolean otherClients = this.clients.size() > 1;
-
-        if ( otherClients ) { broadcast(packet); }
-        else                _emitCacheSignal() ;
-    }
+    private void handleBroadcastEvent( Packet packet ) { broadcast(packet); }
 
     // to refactor ( like the whole file )
     private void sendPacket ( Packet packet ){
@@ -418,7 +587,7 @@ public class ClientHandler implements Runnable{
         }
     }
 
-    // sending to all the clients the msg of the current client;
+    // sending to all the DEFAULT_GROUP.clients the msg of the current client;
     public void broadcast( Packet packet )
     {
         byte[] bytes;
@@ -430,18 +599,24 @@ public class ClientHandler implements Runnable{
 
     private void _broadcast ( Packet packet )
     {
-        for ( Entity client : clients )
+        ArrayList<Entity> to = this.currentGrp.clients;
+        OutputStream os      = null;
+
+        for ( int i = 0 ; i < to.size(); i ++ )
         {
-            if ( client != this.client )
-            {
-                try {
-                    client.getSocket().getOutputStream().write( packet.output() );
-                    client.getSocket().getOutputStream().flush()                 ;
+            Entity client_ = to.get ( i );
+            if ( client_ != this.client ){
+                try{
+                    os = client_.getSocket().getOutputStream();
+                    os.write( packet.output() );
+                    os.flush();
                 }
-                catch( IOException e ) {
-                    System.out.println("[ERROR], couldn't broadcast the message.");
+                catch ( IOException e )
+                {
+                    System.out.println( "[ERROR] Something went terribly wrong..." );
                 }
             }
+            else continue;
         }
     }
 

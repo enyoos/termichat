@@ -11,3 +11,7 @@ server:
 
 utils:
 	@mvn package && java -cp target/classes com.java.crypto.Encryption.Utils
+
+# for some reason this command doesn't work
+#clines:
+#	@(for /r %f in (*.java) do @type "%f") | find /c /v ""

@@ -9,8 +9,10 @@ public enum PACKET_TYPE {
     KEY        (  4 ), // DIFFIE HELLMAN EXCHANGE SPECIFICATION PACKET
     BROADCAST  ( -2 ), // BROADCASTING A MESSAGE TO EVERYONE 
     REPEAT     (  5 ), // IF USERNAME IS USED, SEND REPEAT INTRUCTION
-    CACHE      (  7 ), // tells the client to cache his pacekt ( until new clients joins )
-    OK         (  6 ); // OK STANDS FOR OLL KORRECT
+    CREATE     (  8 ), // tells the server to create a new subgroup
+    JOIN       (  9 ), // JOIN NEW CHAT GROUP
+    ERR        (  7 ), // when somehting is wrong, can contain some directive. ( name, ... ) -> to refactor
+    OK          (  6 ); // OK STANDS FOR OLL KORRECT
 			
     private final byte value;
     private PACKET_TYPE( int b ) { this.value = ( byte ) b; }

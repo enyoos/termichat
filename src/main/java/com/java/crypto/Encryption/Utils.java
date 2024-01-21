@@ -46,18 +46,17 @@ public final class Utils {
 
 	public static boolean compare( byte[] bytes1, byte[] bytes2 )
 	{
-		int length1 = bytes.length;
-		int length2 = bytes.length;
+		int length1 = bytes1.length;
+		int length2 = bytes2.length;
 
 		if ( length1 != length2 ) return false;
 		
-		for ( byte b : bytes1 )
+		for ( int i = 0; i < length1; i ++ )
 		{
-			for ( byte b_ : bytes2 )
-			{
-				if ( b == b_ ) continue    ;
-				else           return false;
-			}
+			byte b = bytes1[i];
+			byte b_= bytes2[i];
+
+			if ( b != b_ ) return false;
 		}
 		
 		return true;
@@ -157,9 +156,10 @@ public static int modPow ( int value, int g, int p ) { return ( (int)  Math.pow 
 
     public static void main(String[] args) throws Exception {
 
-	// 10 rounds for 128-bit keys.
-	// 12 rounds for 192-bit keys.
-	// 14 rounds for 256-bit keys.
+		// 10 rounds for 128-bit keys.
+		// 12 rounds for 192-bit keys.
+		// 14 rounds for 256-bit keys.
+
 		byte[] arr  = {55,55,55,65};
 		byte[] arr2  = {55,55,55,65};
 
