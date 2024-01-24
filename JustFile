@@ -15,3 +15,10 @@ utils:
 # for some reason this command doesn't work
 #clines:
 #	@(for /r %f in (*.java) do @type "%f") | find /c /v ""
+
+# c for ``count``, commits for ``git commits``
+ccommits:
+	@git shortlog -s
+
+parse:
+	@mvn package && java -cp target/classes com.java.crypto.Command.Commands.helpers.Parser
