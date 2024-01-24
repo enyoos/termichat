@@ -10,36 +10,39 @@ import com.java.crypto.Packet.Packet;
 
 public class ListAllClientsNamesOperation implements Action, Parseable{
 
-    private static final String FLAG = "-l";
+    private static final String FLAG_SPEC_LIMIT = "-l";
 
     private Sender sender;
     private Integer limit;
+    private Parser parser;
 
     public ListAllClientsNamesOperation(){}
     public ListAllClientsNamesOperation( Sender sender, String input ){ this.sender = sender; this.parse ( input );}
 
     @Override
-    public void parse ( String input ) {
+    public void parse ( String input ) 
+    {
+        this.parser = new Parser ( new Lexer ( input ) );
+        this.parser.parse();
+    }
 
-        String[] tokens = input.split ( " " );
-        boolean isFlag  = false;
-        Integer max     = null;
-        
-        for ( String token : tokens )
-        {
-            if ( token.contains ( FLAG ) ) isFlag = true;
-            else if ( isFlag ) 
-            {
-                try {
-                    max = Integer.parseInt ( token );
-                }
-                catch ( RuntimeException e ) { System.out.println( "[ERROR] you need to provide a valid number" ); }
+    @Override
+    public boolean eval()
+    {
+        ArrayList<String> limit_s = this.parser.struct.get ( FLAG_SPEC_LIMIT );
+        boolean is_limit          = 
+    }
+
+    private boolean validate_limit ( ArrayList<String> limit_s )
+    {
+        boolean isnt_null = limit_s != null    ;
+        boolean has_one   = limit_s.size() == 1;
+
+        if ( isnt_null && has_one ) {
+            try{
+                Integer.parse ( limit_s.get ( 0 ) );
             }
-            else continue;
         }
-
-        this.limit = max;
-
     }
 
     @Override

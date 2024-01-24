@@ -22,3 +22,9 @@ ccommits:
 
 parse:
 	@mvn package && java -cp target/classes com.java.crypto.Command.Commands.helpers.Parser
+
+timer:
+	@mvn package && java -cp target/classes com.java.crypto.CustomStruct.Pool
+
+stats:
+	@git diff --shortstat

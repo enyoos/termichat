@@ -84,13 +84,13 @@ public final class Utils {
 		return pair;
 }
 
-public static String[] splitAtFirstOccurenceOf ( String t, String content )
+public static String[] splitAtFirstOccurenceOf ( String pattern, String content )
 {
     // check the first occurence of the comma
-    int firstOccurenceOfComma = content.indexOf(t);
+    int firstOccPattern = content.indexOf(pattern);
 
-    String leftPart = content.substring(0, firstOccurenceOfComma);
-    String rightPart= content.substring(firstOccurenceOfComma + 1);
+    String leftPart = content.substring(0, firstOccPattern);
+    String rightPart= content.substring(firstOccPattern + 1);
 
     String[] ret = { leftPart, rightPart };
 

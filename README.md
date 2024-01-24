@@ -16,3 +16,9 @@ you must go to it github repository and follow the instructions. [Link text](htt
 
 ## Server
 ``just server``
+
+
+
+# Fun facts
+This application took 2956 lines code.
+I am sure with multiple optimizations, we can decrease the length of the codebase.

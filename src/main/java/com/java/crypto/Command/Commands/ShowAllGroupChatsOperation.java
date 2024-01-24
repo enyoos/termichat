@@ -43,6 +43,9 @@ public class ShowAllGroupChatsOperation implements Action, Parseable
     }
 
     @Override
+    public boolean eval(){return false;}
+
+    @Override
     public void execute()
     {
 

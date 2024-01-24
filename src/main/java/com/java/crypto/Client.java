@@ -1,15 +1,18 @@
 package com.java.crypto;
 
-import java.io.IOException ;
-import java.io.InputStream ;
-import java.io.OutputStream;
-import java.math.BigInteger;
-import java.net.Socket     ;
-import java.util.Scanner   ;
-import java.util.Arrays    ;
-import java.util.Base64    ;
-import java.util.ArrayList ;
-import java.util.Random    ;
+import java.io.IOException              ;
+import java.io.InputStream              ;
+import java.io.OutputStream             ;
+import java.math.BigInteger             ;
+import java.net.Socket                  ;
+import java.util.Scanner                ;
+import java.util.Arrays                 ;
+import java.util.Base64                 ;
+import java.util.ArrayList              ;
+import java.util.Random                 ;
+import java.util.NoSuchElementException ;
+
+import com.happycli.java.*;
 
 import static com.java.crypto.Encryption.Utils.*;
 import static com.java.crypto.App.*             ;
@@ -29,7 +32,7 @@ public class Client {
     private static final long TIME_OUT       = 500;
     // the info command is for debugging purposes
     public static String[] COMMANDS          = {
-        "ping", "server_info", "list", "exit","dm","help", "info", "create", "listgc", "join"
+        "ping", "server_info", "list", "exit","dm","help", "info", "create", "listgc", "join", "ban"
     };
 
     private volatile boolean RECEIVEDPACKET  = false;
@@ -57,6 +60,9 @@ public class Client {
     private Sender sender        ; // this is essential to the command pattern
     private Socket socket        ;
     private String name          ;
+
+    private String currentGrpName   = "default";
+    private final TextureBuilder tb = new TextureBuilder();
 
     // all the getters
     public String getName          () { return this.name      ; }
@@ -89,7 +95,7 @@ public class Client {
 
         // as you can see we're not encrypting the name sent.
         // in order to remove the slight overhead.
-        System.out.println("[CLIENT] sending the name to the server and other parties.");
+        System.out.println("[LOGGING] sending the name to the server and other parties.");
         Packet SecondDefaultPacket = new Packet(name, PACKET_TYPE.CONNECT);
 
         sendPacket(SecondDefaultPacket);
@@ -103,7 +109,7 @@ public class Client {
     {
         try{
             Thread.sleep ( st );
-        }catch ( InterruptedException e ) { System.out.println( "unpatient" ); }
+        }catch ( InterruptedException e ) { System.out.println( "[LOGGING, ERROR] unpatient" ); }
     }
 
     // this the main loop
@@ -152,22 +158,28 @@ public class Client {
             public void run()
             {
 
-                String prompt   = name + " >";
-                boolean running = true       ;
-                String command  = ""         ;
-                Action command_ = null       ;
-                String input    = ""         ;
-                Packet packet   = null       ;
+                String prompt   = String.format( "%s [%s] > ", name, currentGrpName );
+                boolean running = true                         ;
+                String command  = ""                           ;
+                Action command_ = null                         ;
+                String input    = ""                           ;
+                Packet packet   = null                         ;
 
                 while ( running )
                 {
                     //if ( !RECEIVEDPACKET ){
-                        promptUserForMsg ( prompt,
-                                command,
-                                command_,
-                                input,
-                                packet );
-                    //}
+                    try{
+                        promptUserForMsg ( 
+                            prompt,
+                            command,
+                            command_,
+                            input,
+                            packet 
+                        );
+                    }
+                    catch ( NoSuchElementException ignore ) {
+                        exit();
+                    }
                 //else continue;
                 }
             }
@@ -176,106 +188,126 @@ public class Client {
         t.start();
     }
 
+    private void exit()
+    {
+        handleInfoResponse("Killing main process. Hasta La Vista Amigo!");
+        System.exit( 0 );
+    }
+
     private void promptUserForMsg ( String context, String command, Action command_, String input, Packet packet )
     {
-			System.out.print(context); 
-                    input = scanner.nextLine();
 
-                    // on Input check if there's any command
-                    // a command starts with the COMMAND_DELIMITER
+        System.out.print(context); 
+        input = scanner.nextLine();
+        // on Input check if there's any command
+        // a command starts with the COMMAND_DELIMITER
 
-                    if ( input.isEmpty() ) { System.out.println("[ERROR] you need to say something, everyone is waiting ..."); }
-                    else
-                    {
-                        // we can compare the hash ?
-                        if ( input.charAt(0) == COMMAND_DELIMITER )
-                        {
-                            command = input.substring(
-                                1, 
-                                input.indexOf(" ") == -1 ? input.length() : input.indexOf(" ")
-                            );
+        if ( input.isEmpty() ) { handleErrResponse("[ERROR] you need to say something, everyone is waiting ..."); }
+        else
+        {
+            // we can compare the hash ?
+            if ( input.charAt(0) == COMMAND_DELIMITER )
+            {
+                command = input.substring(
+                    1, 
+                    input.indexOf(" ") == -1 ? input.length() : input.indexOf(" ")
+                );
 
-                            if ( command.equals( COMMANDS[0]) )
-                            {
-                                command_ = new PingServerOperation(sender);
-                                command_.execute();
-                            }
-                            else if ( command.equals(COMMANDS[1]) )
-                            {
-                                command_ = new ShowServerInfoOperation( sender );
-                                command_.execute();
-                            }
-                            else if ( command.equals(COMMANDS[2]) )
-                            {
-                                command_ = new ListAllClientsNamesOperation( sender , input );
-                                command_.execute();
-                            }
-                            else if ( command.equals( COMMANDS[3]) )
-                            {
-                                command_ = new ExitChatApplicationOperation( sender) ;
-                                command_.execute();
-                                
-                                System.out.println("[CLIENT] Killing main process. Hasta La Vista Amigo!");
-                                System.exit( 0 );
-                            }
-                            else if ( command.equals(COMMANDS[4]) )
-                            {
-                                command_ = new DMUserOperation(sender, input);
-                                command_.execute();
-                            }
-                            else if ( command.equals(COMMANDS[5]) )
-                            {
-                                command_ = new ShowAllCommandsOperation(sender, input);
-                                command_.execute();
-                            }
-                            else if ( command.equals(COMMANDS[6]) )
-                            {
-                                command_ = new ShowAllUserInformation( sender, this );
-                                command_.execute();
-                            } 
-                            else if ( command.equals(COMMANDS[7]) )
-                            {
-                                command_ = new CreateGroupOperation( sender, input );
-                                command_.execute();
-                            }
-                            else if ( command.equals(COMMANDS[8]) )
-                            {
-                                command_ = new ShowAllGroupChatsOperation( sender, input );
-                                command_.execute();
-                            }
-                            else if ( command.equals(COMMANDS[9]) )
-                            {
-                                command_ = new JoinGroupChatOperation( sender, input );
-                                command_.execute();
-                            }
-                            else 
-                            {
-                                String meantCmd = lev ( input, COMMANDS );
-                                System.out.println( 
-                                        "[ERROR] this command doesn't exist. Did you mean " + meantCmd + " ?"
-                                );
-                            }
-                        }
-                        else {
+                if ( command.equals( COMMANDS[0]) )
+                {
+                    command_ = new PingServerOperation(sender);
+                    command_.execute();
+                }
+                else if ( command.equals(COMMANDS[1]) )
+                {
+                    command_ = new ShowServerInfoOperation( sender );
+                    command_.execute();
+                }
+                else if ( command.equals(COMMANDS[2]) )
+                {
+                    // split at the first occurence of " "
+                    input    = splitAtFirstOccurenceOf( " ", input )[1];
+                    command_ = new ListAllClientsNamesOperation( sender , input );
+                    command_.execute();
+                }
+                else if ( command.equals( COMMANDS[3]) )
+                {
+                    input    = splitAtFirstOccurenceOf( " ", input )[1];
+                    command_ = new ExitChatApplicationOperation( sender );
+                    command_.execute();
+                    
+                    this.exit();
+                }
+                else if ( command.equals(COMMANDS[4]) )
+                {
+                    input    = splitAtFirstOccurenceOf( " ", input )[1];
+                    command_ = new DMUserOperation(sender, input);
+                    command_.execute();
+                }
+                else if ( command.equals(COMMANDS[5]) )
+                {
+                    input    = splitAtFirstOccurenceOf( " ", input )[1];
+                    command_ = new ShowAllCommandsOperation(sender, input);
+                    command_.execute();
+                }
+                else if ( command.equals(COMMANDS[6]) )
+                {
+                    input    = splitAtFirstOccurenceOf( " ", input )[1];
+                    command_ = new ShowAllUserInformation( sender, this );
+                    command_.execute();
+                } 
+                else if ( command.equals(COMMANDS[7]) )
+                {
+                    input    = splitAtFirstOccurenceOf( " ", input )[1];
+                    command_ = new CreateGroupOperation( sender, input );
+                    command_.execute();
+                }
+                else if ( command.equals(COMMANDS[8]) )
+                {
+                    input    = splitAtFirstOccurenceOf( " ", input )[1];
+                    command_ = new ShowAllGroupChatsOperation( sender, input );
+                    command_.execute();
+                }
+                else if ( command.equals(COMMANDS[9]) )
+                {
+                    input    = splitAtFirstOccurenceOf( " ", input )[1];
+                    command_ = new JoinGroupChatOperation( sender, input );
+                    command_.execute();
+                }
+                else if ( command.equals(COMMANDS[10]) )
+                {
+                    input    = splitAtFirstOccurenceOf( " ", input )[1];
+                    command_ = new BanEntityOperation( sender, input );
+                    command_.execute();
+                }
+                else 
+                {
+                    String meantCmd = lev ( input, COMMANDS );
+                    handleErrResponse( 
+                            "[ERROR] this command doesn't exist. Did you mean " + meantCmd + " ?"
+                    );
+                }
+            }
+            else {
 
-                            // by default, we broadcast each msg
-			    // we generate the iv for each   msg.
-			    boolean hasSk = sk != null;
+                // by default, we broadcast each msg
+    // we generate the iv for each   msg.
+    boolean hasSk = sk != null;
 
-			    if ( hasSk ){
-				    sendPacket ( encryptMsg ( input ) );
-			    }
+    if ( hasSk ){
+        sendPacket ( encryptMsg ( input ) );
+    }
 
-			    else { showNoSKWarning( ); }
-                        }
-                    }
+    else { showNoSKWarning( ); }
+            }
+        }
 
     }
 
     private void showNoSKWarning( )
     { 
 	    // pause the thread
-	    System.out.println( "[WARNING] You don't have a Secret key and this will result in unencrypted messages. You must wait for someone to join the room." );
+	    handleInfoResponse( "[WARNING] You don't have a Secret key and this will result in unencrypted messages. You must wait for someone to join the room." );
     }
 
     // handling the events.
@@ -287,7 +319,7 @@ public class Client {
 	    
 	    // interruptThreadWithName ( "sendNameAndKeyTask" );
 	    // interruptThreadWithName ( "inputTask"          );
-	    handleResponseEvent     ( packet               );
+	    handleResponseEvent     ( packet );
 
 	    this.name = promptUsername();
 
@@ -314,7 +346,7 @@ public class Client {
     {
 	    // you broadcast your key thanks
 	    // bfore even sending your name
-	    System.out.println("[CLIENT] sending the mixed key to the server.");
+	    System.out.println("[LOGGING] sending the mixed key to the server.");
 	    byte[] bytes   = this.MIXED_KEY.toByteArray() ;
         boolean hasSK_ = this.sk != null;
 
@@ -331,7 +363,7 @@ public class Client {
     {
 
         BigInteger recKey_= new BigInteger ( recKey );
-        System.out.println( "received key : " + recKey_ );
+        System.out.println( "[LOGGING] received key : " + recKey_ );
         this.tempSk       = recKey_.modPow ( this.diffieKey, P );
         byte[] bytes      = cropBigIntBy ( 16, this.tempSk);
         this.sk           = new SecretKeySpec ( bytes , ALGORITHM );
@@ -351,7 +383,7 @@ public class Client {
             case 1:
 
                 // that means that the other client has a secret key
-                System.out.println( "The other client has a secret key" );
+                System.out.println( "[LOGGING] The other client has a secret key" );
                 setKey(trimArrayByOne ( bytes ) );
                 break;
 
@@ -365,11 +397,11 @@ public class Client {
                 if ( !compare( trimArrayByOne( bytes ), this.MIXED_KEY.toByteArray( ))) {
                     sendKey();
                 }
-                else System.out.println( "already did the exchange" );                    
+                else System.out.println( "[LOGGING] already did the exchange" );                    
                 break;
 
             default:
-                System.out.println( "[WARNING] leading byte unsupported during the key exchange" );
+                System.out.println( "[LOGGING, WARNING] leading byte unsupported during the key exchange" );
                 break;
         }
 
@@ -399,13 +431,13 @@ public class Client {
     // generates the mixed Key from an initial key
     private void genMKey( ) { 
         this.MIXED_KEY = this.G.modPow ( this.diffieKey, P );
-        System.out.println ( "generated the mixed key with value : " + this.MIXED_KEY );
+        System.out.println ( "[LOGGING] generated the mixed key with value : " + this.MIXED_KEY );
     }
 
     public void genKey ( )
     {
 
-        System.out.println( "generating a new key" );
+        System.out.println( "[LOGGING] generating a new key" );
         this.diffieKey = gKey ( SIZE_KEY_BIT );
         genMKey();
 
@@ -417,10 +449,100 @@ public class Client {
         updateKey();
 
 	    String uncMsg = packet.getMsg();	    
-	    System.out.println( uncMsg );
-
+        handleOKResponse( uncMsg );
     }
-    private void handleResponseEvent ( Packet packet ) { System.out.println( packet.getMsg() );}
+
+    // painted with yellow and underlined
+    private void handleInfoResponse ( String info )
+    {
+        String out = tb.content( info ).underline( true ).foreground( PaintOptions.YELLOW ).build();
+        System.out.println( out );
+
+        tb.clear();
+    }
+
+    // the ok response shall be in GREEN and underlined
+    private void handleOKResponse   ( String respContent ) { 
+        String out = tb.content ( respContent ).underline( true ).foreground(PaintOptions.GREEN).build();
+        System.out.println ( out );
+
+        tb.clear();
+    }
+
+    // the err response is going to be red with the underlined effect
+    private void handleErrResponse  ( String errMsg      ) {
+        String out = tb.content ( errMsg ).underline(true).foreground(PaintOptions.RED).build();
+        System.out.println ( out ); 
+
+        tb.clear();
+    }
+
+    // the join response 
+    private void handleJoinResponse ( String respContent ) {
+
+        String[] tokens       = splitAtFirstOccurenceOf(",", respContent);
+        this.currentGrpName   = tokens[0];
+        String out            = tokens[1];
+
+        handleOKResponse( out );
+    }
+
+    // the dm will be purple and bold
+    private void handleDMResponse      ( String respContent ) { 
+        String out = tb.content ( respContent ).bold ( true ).foreground ( PaintOptions.MAGENTA ).build();
+        System.out.println ( out ); 
+
+        tb.clear();
+    }
+
+    // blue bold, underline and blinking
+    private void handleListResponse ( String list )
+    {
+        String out = tb.content ( list ).underline ( true ).foreground ( PaintOptions.BLUE ).bold( true ).blink( true ).build();
+        System.out.println ( out );
+
+        tb.clear();
+    }
+
+    private void handleUnknownResponse ( String respType    )                    
+    { 
+        // the stdin should be a log file 
+        handleErrResponse  ( "[LOGGING] received an unknow response with value : " + respType );
+    }
+
+    private static final String[] RESPONSES = {
+        "ok"    , // if name is correct
+        "error" , // if there's an error
+        "joined", // succesfully joined a group chat
+        "list"  , // shows a list of all the users in some group chat
+        "dm"    , // dm from someone
+    };
+
+    private void handleResponseEvent ( Packet packet ) {
+
+        String[] tokens    = splitAtFirstOccurenceOf( ",", packet.getMsg() );
+        String respType    = tokens[0];
+        String respContent = tokens[1];
+
+        // handling ok TypeScenario
+        if      ( respType.equals ( RESPONSES[0]) )
+        { handleOKResponse( respContent )  ; }
+        
+        else if ( respType.equals ( RESPONSES[1]) )
+        { handleErrResponse( respContent ) ; }
+
+        else if ( respType.equals ( RESPONSES[2]) )
+        { handleJoinResponse( respContent ); }
+
+        else if ( respType.equals ( RESPONSES[3]) )
+        { handleListResponse( respContent ); }
+
+        else if ( respType.equals ( RESPONSES[4]) )
+        { handleDMResponse( respContent )  ; }
+
+        else {}
+    }
+
     private void handleOKEvent ( Packet packet ) { System.out.println( "[SERVER] 200 OK!" )   ;}
 
     private void receivePacket( )
@@ -448,10 +570,6 @@ public class Client {
                     handleResponseEvent( packet );
                     break;
 
-                case OK:
-                    handleOKEvent( packet );
-                    break;
-                
                 case DISCONNECT:
                     handleDisconnectEvent ( packet );
                     break;

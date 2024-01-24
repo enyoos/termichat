@@ -17,16 +17,18 @@ public class ShowAllCommandsOperation implements Action, Parseable{
     private static final String COMMAND_PARTICULAR_FLAGG = "--command";
     private String commandInParticular                   = "";
     private static final String[] COMMANDS_DESCRIPTION   = {
-        "ping            pings the server and returns pong!",
-        "sever_info      returns the name of the server    ",
-        "list            returns list of all the users in the group chat.           (-l/limit of the users to show)",
-        "exit            exits the group chat instance",
-        "dm              sends a private msg to some user                           (-m/specify message, -u/specify user)",
-        "help            shows all the commands, or details a particular command    (-c/name of unique cmd)",
         "info            shows all the information concerning the client ( you )",
-        "create          creates special group                                      (-n/name of the group chat)",
-        "listgc          shows all the groups currently active                      (-l/limit of the gc to show)",
-        "join            joins the specified group chat                             (-n/name of the group chat)"
+        "ping            pings the server and returns pong!",
+        "exit            exits the group chat instance",
+        "sever_info      returns the name of the server    ",
+        "list            returns list of all the users in the group chat.                  (-l/limit of the users to show                                                             )",
+        "dm              sends a private msg to some user                                  (-m/specify message, -u/specify user                                                       )",
+        "help            shows all the commands, or details a particular command           (-c/name of unique cmd                                                                     )",
+        "create          creates special group                                             (-n/name of the group chat                                                                 )",
+        "listgc          shows all the groups currently active                             (-l/limit of the gc to show                                                                )",
+        "join            joins the specified group chat ( gc )                             (-n/name of the group chat                                                                 )",
+        "ban             ban someone or a specific gc                                      (-n/name of the user, -t/duration (min) of the ban, -r/explicit reason of the ban          )",
+        "close           close a group chat                                                (-n/name of the group chat                                                                 )",
     };
 
     private Sender sender;
@@ -57,6 +59,9 @@ public class ShowAllCommandsOperation implements Action, Parseable{
     }
 
     @Override
+    public boolean eval(){return false;}
+
+    @Override
     public void execute() {
 
         StringBuilder sb = new StringBuilder();
@@ -78,6 +83,7 @@ public class ShowAllCommandsOperation implements Action, Parseable{
             sb.append("\n" + COMMANDS_DESCRIPTION[7]);
             sb.append("\n" + COMMANDS_DESCRIPTION[8]);
             sb.append("\n" + COMMANDS_DESCRIPTION[9]);
+            sb.append("\n" + COMMANDS_DESCRIPTION[10]);
         }
         else 
         {

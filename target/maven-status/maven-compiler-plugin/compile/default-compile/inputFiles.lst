@@ -6,15 +6,17 @@ C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Entity.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Action.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Server.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Encryption\Utils.java
+C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\BanEntityOperation.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\ClientHandler.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\ListAllClientsNamesOperation.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Packet\Packet.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\ExitChatApplicationOperation.java
+C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\helpers\Lexer.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\CreateGroupOperation.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Client.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\DMUserOperation.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\PingServerOperation.java
-C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\Test.java
+C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\CustomStruct\Pool.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\JoinGroupChatOperation.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Sender.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\InputCommandExecutor.java
@@ -22,4 +24,5 @@ C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Group.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\ShowAllGroupChatsOperation.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\Parseable.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\ShowServerInfoOperation.java
+C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\helpers\Parser.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\ShowAllUserInformation.java

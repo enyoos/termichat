@@ -73,20 +73,16 @@ public class Packet {
                 type = PACKET_TYPE.REPEAT;
                 break;
 
-            case 6:
-                type = PACKET_TYPE.OK;
-                break;
-            
-            case 7:
-                type = PACKET_TYPE.ERR;
-                break;
-
-            case 8:
+           case 8:
                 type = PACKET_TYPE.CREATE;
                 break;
 
             case 9:
                 type = PACKET_TYPE.JOIN;
+                break;
+
+            case -6:
+                type = PACKET_TYPE.BAN;
                 break;
 
             default:

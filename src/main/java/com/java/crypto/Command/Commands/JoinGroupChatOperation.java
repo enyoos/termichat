@@ -1,16 +1,21 @@
 package com.java.crypto.Command.Commands;
 
+import java.util.ArrayList;
+
 import com.java.crypto.Command.Action;
 import com.java.crypto.Client;
 import com.java.crypto.Command.Sender;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
+import com.java.crypto.Command.Commands.helpers.*;
+
 public class JoinGroupChatOperation implements Action, Parseable
 {
-    private static final String FLAG = "-n";
+    private static final String FLAG_NAME_SPEC_GC = "-n";
 
     private Sender sender;
+    private Parser parser;
     private String gcName;
 
     public JoinGroupChatOperation(){}
@@ -23,32 +28,41 @@ public class JoinGroupChatOperation implements Action, Parseable
     @Override
     public void parse( String input )
     {
-        String[] tokens= input.split ( " " );
-        String arg     = "";
-        boolean isFlag = false;
+        this.parser = new Parser ( new Lexer ( input ) );
+        this.parser.parse();
+    }
 
-        for ( String token : tokens )
+    @Override
+    public boolean eval(){
+
+        ArrayList<String> name_s = this.parser.struct.get ( FLAG_NAME_SPEC_GC );
+        boolean is_name          = validate_name( name_s );
+
+        if (is_name)
         {
-            if ( token.contains ( FLAG ) ) isFlag = true; 
-            else if ( isFlag )             arg    = token;
-            else continue;
+            this.gcName = name_s.get ( 0 ); 
+            return true;
         }
 
-        this.gcName = arg;
+        System.out.println( "[ERROR] Name of the group chat is not specified or supplied multiple names" );
+        return false;
     }
+
+    private boolean validate_name ( ArrayList<String> name_s )
+    { return name_s != null && name_s.size() == 1; }
 
     @Override
     public void execute()
     {
-        if ( gcName != null )
+        boolean is_eval = this.eval();
+        if ( is_eval )
         {
-            // TODO, same methodolgy for the private messaging. 
             String msg       = this.gcName;
             PACKET_TYPE type = PACKET_TYPE.JOIN;
             Packet packet    = new Packet ( msg, type ); 
             sender.send ( packet );
         }
-        else { System.out.println( "[ERROR] you need to specify the group chat name you intend to join. Use ``/help -c join``" ); }
+        
     }
 
 }

@@ -24,7 +24,7 @@ public class ClientHandler implements Runnable{
 
     // the list of commands
     private static final String[] COMMANDS = { 
-        "list", "server_info", "ping", "listgc"
+        "list", "server_info", "ping", "listgc", "exit"
     };
 
     // specific to each client.
@@ -106,7 +106,8 @@ public class ClientHandler implements Runnable{
             switch (type) {
 
                 case DISCONNECT:
-                    handleDisconnectEvent(packet);
+                    boolean exit = false;
+                    handleDisconnectEvent(packet, exit);
                     break;
 
                 case CONNECT:
@@ -138,6 +139,10 @@ public class ClientHandler implements Runnable{
                 case JOIN:
                     handleJoinEvent( packet );
                     break;
+                
+                case BAN:
+                    handleBanEvent ( packet );
+                    break;
 
                 default:
                     handleUnknownPacket ( packet );
@@ -145,9 +150,46 @@ public class ClientHandler implements Runnable{
             }
         }catch( IOException e ){
             // if we're here, meaning that the user disconnected
-            handleDisconnectEvent(packet);
-            // handleDisconnectEvent(packet);
+            boolean exit = true;
+            handleDisconnectEvent(packet, exit);
         }
+    }
+
+
+    private boolean authAdmin () { return this.currentGrp.admin.equals ( this.client.getName() ); }
+    private void ban ( String name, int duration, String reason )
+    {
+        // send the packet with the reason
+        sendPacket ( new Packet ( reason, PACKET_TYPE.BAN ) );
+
+        // kick the user from the currentGrp chat 
+        // but the user can always re-enter
+        // we must keep tracks of the banned ppl;
+        // bannedPool for instance that evacuates itself by the time
+        // like a timed-out cache ( to be implemented )
+        // like an arrayList that manages it self
+        for ( Entity client : this.currentGrp.clients )
+        {
+            if ( client.getName().equals ( name ) ) this.currentGrp.clients.remove ( client ); 
+            else                                    continue;
+        }
+
+    }
+
+    private void handleBanEvent ( Packet packet )
+    {
+        String[] msg   = packet.getMsg ( ).split("|");
+        String[] names = msg[0].split(",");
+        String   time  = msg[1];
+        String reason  = msg[2];
+
+        for ( String name : names )
+        {
+            // check if the user exist in the current group
+            if ( isUserExist( name ) ) ban ( name, Integer.parseInt ( time ), reason );
+            else                      continue;
+        } 
+
     }
 
     private Optional<Group> gcPresent( String name )
@@ -163,6 +205,7 @@ public class ClientHandler implements Runnable{
 
         if ( opt.isPresent() ) 
         {
+
             // add the user to the group
             // and remove him from the precedent group
             // and broadcast disconnect packet to all the users 
@@ -170,19 +213,19 @@ public class ClientHandler implements Runnable{
             joined.clients.add( this.client );
 
             this.currentGrp.clients.remove( this.client );
-            Group previousGrp = this.currentGrp;
-            this.currentGrp   = joined;
-
             Packet mockPacket = new Packet( );
 
-            handleDisconnectEvent( mockPacket );
+            boolean exit = false;
+            handleDisconnectEvent(mockPacket, false);
+
+            this.currentGrp   = joined;
 
             // let the user know that he joined a new group
             // and broadcast his new arrival
-            Packet letDUserKnow = new Packet ( "You joined the gc : " + gcName, PACKET_TYPE.RESPONSE );
+            Packet letDUserKnow = new Packet ( "joined,You joined the gc : " + gcName, PACKET_TYPE.RESPONSE );
             sendPacket ( letDUserKnow );
 
-            String msg = String.format ( "%s joined the group chat", this.client.getName() );
+            String msg = String.format ( "ok,%s joined the group chat", this.client.getName() );
             Packet letDOtherUsersKnow = new Packet ( msg, PACKET_TYPE.CONNECT );
 
             broadcast( letDOtherUsersKnow );
@@ -190,7 +233,7 @@ public class ClientHandler implements Runnable{
 
         else
         {
-            String msg = String.format ( "[ERROR] the group chat with name : %s doesn't exist", gcName );
+            String msg = String.format ( "error,[ERROR] the group chat with name : %s doesn't exist", gcName );
             Packet packet_ = new Packet ( msg, PACKET_TYPE.RESPONSE );
             
             sendPacket ( packet_ );
@@ -217,9 +260,9 @@ public class ClientHandler implements Runnable{
         {   
 
             Group grp        = new Group (adminName, gcName);
-            PACKET_TYPE type = PACKET_TYPE.OK           ;
-            String msg       = "[200] CREATED GroupChat";
-            Packet send      = new Packet ( msg, type );
+            PACKET_TYPE type = PACKET_TYPE.RESPONSE         ;
+            String msg       = "ok,Created GroupChat"       ;
+            Packet send      = new Packet ( msg, type )     ;
 
             GROUPS.add ( grp );
             sendPacket ( send );
@@ -227,7 +270,7 @@ public class ClientHandler implements Runnable{
         else {
             sendPacket (
                 new Packet ( 
-                    "[ERROR] group chat name : " + gcName + " is already in use.",
+                    "error,[ERROR] group chat name : " + gcName + " is already in use.",
                     PACKET_TYPE.RESPONSE 
                 )
             );
@@ -245,13 +288,9 @@ public class ClientHandler implements Runnable{
 	private void handleUnknownPacket ( Packet packet ) { System.out.println( "[LOGGING] packet unknown info : " + packet ); }
     private void handleKeyExchange( Packet packet ) { broadcast ( packet ); }
     
-    // special request from the client
-    // i.e some api fecth ( like )
     private void handleQueryClient( Packet packet )
     {
 
-        System.out.println( "[LOGGING] handling query client" );
-        // gettigns the Command
         String command       = packet.getMsg();
         String optionalValue = "";
         int limit            = GROUPS.size();
@@ -297,6 +336,12 @@ public class ClientHandler implements Runnable{
 
             sendListOfGroupChats( limit ); 
         }
+        
+        else if ( command.equals(COMMANDS[4]))
+        {
+            boolean exit = true;
+            handleDisconnectEvent( packet, true );
+        }
 
         // do nothing, return nothing.
         else { return; }
@@ -328,7 +373,9 @@ public class ClientHandler implements Runnable{
         sb.append("\n");
         sb.append( DELIMITER );
 
-        packet.setMsg ( sb.toString() );
+        String msg = "list," + sb.toString();
+
+        packet.setMsg (msg);
         packet.setType( PACKET_TYPE.RESPONSE );
 
         sendPacket ( packet );
@@ -339,16 +386,12 @@ public class ClientHandler implements Runnable{
         Packet packet = new Packet();
 
         PACKET_TYPE type = PACKET_TYPE.RESPONSE;
-        String resp = "Pong, server!";
+        String resp = "ok,Pong, server!";
 
         packet.setMsg(resp);
         packet.setType(type);
         
-        try{
-            os.write(packet.output());
-            os.flush();
-        }
-        catch (IOException e ) { System.out.println("[ERROR] couldn't send the result of the command with value : " + COMMANDS[1]);}
+        sendPacket ( packet );
     }
 
     private void sendServerInstanceInfo()
@@ -356,17 +399,14 @@ public class ClientHandler implements Runnable{
         Packet packet = new Packet();
         
         // what to send and what not to send. ( as server info )
-        String info = String.format("Server name : %s", ClientHandler.serverInstanceName);
+        String info = String.format("ok,Server name : %s", ClientHandler.serverInstanceName);
         PACKET_TYPE type = PACKET_TYPE.RESPONSE;
 
         packet.setMsg(info);
         packet.setType(type);
 
-        try{
-            os.write(packet.output());
-            os.flush();
-        }
-        catch (IOException e ) { System.out.println("[ERROR] couldn't send the result of the command with value : " + COMMANDS[2]);}
+        sendPacket ( packet );
+
     }
 
     private static final String DELIMITER = "------------------";
@@ -391,9 +431,12 @@ public class ClientHandler implements Runnable{
             }
             else sb.append(String.format("- %s\n", client_.getName()));
         }
+
         sb.append(DELIMITER);
 
-        packet.setMsg(sb.toString());
+        String msg = "list," + sb.toString();
+
+        packet.setMsg(msg);
         packet.setType(PACKET_TYPE.RESPONSE);
 
         try{
@@ -412,11 +455,11 @@ public class ClientHandler implements Runnable{
     }
 
 
-    private void handleDisconnectEvent( Packet packet )
+    private void handleDisconnectEvent( Packet packet, boolean exit )
     {
 
         // remove the user from the 
-        String msg = "[SERVER] The user " + client.getName() + " has something better to do !";
+        String msg = "ok,[SERVER] The user " + client.getName() + " has something better to do !";
         PACKET_TYPE type = PACKET_TYPE.DISCONNECT;
 
         packet.setType(type);
@@ -425,7 +468,7 @@ public class ClientHandler implements Runnable{
         removeUserByName(client);
         broadcast(packet);
 
-        closeCurrentCommunicationWithClient ();
+        if ( exit ) closeCurrentCommunicationWithClient ();
     }
 
     private void genocideOf ( String clientName )
@@ -472,11 +515,11 @@ public class ClientHandler implements Runnable{
         String targetUser = args[0];
         String content    = args[1];
 
-        if ( ! isUserExist( targetUser) ) 
+        if ( ! isUserExist( targetUser ) ) 
         {
 
             // send to the user the msg with the errorr
-            String err = "[ERROR] client with name " + targetUser + " doesn't exist";
+            String err = "error,[ERROR] client with name " + targetUser + " doesn't exist";
             PACKET_TYPE type = PACKET_TYPE.RESPONSE;
 
             packet.setMsg(err);
@@ -488,8 +531,6 @@ public class ClientHandler implements Runnable{
             }catch( IOException e ) { 
 		    System.out.println("[ERROR] tunnel the error msg, on private messaging. Aborting client connection" );
 	    }
-
-
             return;
         }
 
@@ -503,11 +544,11 @@ public class ClientHandler implements Runnable{
 
         Packet packet;
 
-        for ( Entity client : DEFAULT_GROUP.clients )
+        for ( Entity client : currentGrp.clients )
         {
             if ( client.getName().equals(name) )
             {
-                msg = String.format( "%s -> You >%s", name, content);
+                msg = String.format( "dm,%s > %s", name, content);
                 type= PACKET_TYPE.RESPONSE;
 
                 packet = new Packet(msg, type);
@@ -517,30 +558,35 @@ public class ClientHandler implements Runnable{
                     client.getSocket().getOutputStream().flush();
                 }
                 catch( IOException e ){ System.out.println("ERROR, couldn't send the private message.");}
-
-                break;
             }
         }
+
     }
 
     private boolean isUserExist ( String name )
     {
         // first check if the targetUser is present in the group chat
-        for ( Entity client : DEFAULT_GROUP.clients )
+        for ( Entity client : currentGrp.clients )
         { if ( client.getName().equals(name) ) { return true; } }
+
         return false;
     }
 
     // need to refactor the isUserExist, so instead just created another function
     private boolean isUsernameCurrentlyUsed ( String name )
     {
-        if ( DEFAULT_GROUP.clients.size() == 1 ) return false;
-        else {
-            for ( Entity client : DEFAULT_GROUP.clients )
+        if ( DEFAULT_GROUP.clients.size() == 1 && GROUPS.size() == 1 ) return false; 
+        else
+        {
+            for ( Group g : GROUPS )
             {
-                if ( client != this.client && client.getName ( ).equals( name ) ) return true;   
-                else continue;
+                for ( Entity client : g.clients )
+                {
+                    if ( client != this.client && client.getName ( ).equals( name ) ) return true;   
+                    else continue;
+                }
             }
+
             return false;
         }
 
@@ -569,14 +615,14 @@ public class ClientHandler implements Runnable{
 
         if ( isUsernameCurrentlyUsed( name ) )
         {
-            Packet err = new Packet ( "[ERROR] The name : (" + name + ") is already in use. Retry again.", PACKET_TYPE.REPEAT); 
+            Packet err = new Packet ( "error,[ERROR] The name : (" + name + ") is already in use. Retry again.", PACKET_TYPE.REPEAT); 
             System.out.println( "[LOGGING] name already in use, sending ERROR packet" );
             sendPacket( err );
         }
         else{
             // TELLING THE CLIENT THAT THE USERNAME IS GOOD
             
-            Packet ok = new Packet ( "OK!", PACKET_TYPE.OK );
+            Packet ok = new Packet ( "ok,OK!", PACKET_TYPE.RESPONSE );
             sendPacket ( ok );
 
             client.setName(name);

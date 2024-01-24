@@ -2,14 +2,16 @@ package com.java.crypto.Command.Commands.helpers;
 
 import java.util.*;
 
+import com.java.crypto.Command.Commands.helpers.Lexer;
+
 public class Parser
 {
 
     private static final String OPS = "-";
 
     // flag : args
-    HashMap<String, ArrayList<String>> struct;
-    Lexer lexer;
+    public HashMap<String, ArrayList<String>> struct;
+    public Lexer lexer;
     
 
     public Parser ( Lexer l ) { this.lexer = l; this.struct = new HashMap<>();}
@@ -17,9 +19,10 @@ public class Parser
     
     public static void main ( String... args )
     {
-        System.out.println( "Hello, World" );
-        Lexer l      = new Lexer ( input );
-        Parser p     = new Parser ( l );
+        String input = "Hello, World" ;
+
+        Lexer l  = new Lexer ( input );
+        Parser p = new Parser ( l );
 
         p.parse();
         System.out.println( p.struct );

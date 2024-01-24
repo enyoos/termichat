@@ -15,7 +15,7 @@ public class ExitChatApplicationOperation implements Action{
     public void execute() {
 
         String msg = "exit";
-        PACKET_TYPE type = PACKET_TYPE.DISCONNECT;
+        PACKET_TYPE type = PACKET_TYPE.RESPONSE;
 
         Packet packet = new Packet(msg, type);
         sender.send( packet );

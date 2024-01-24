@@ -10,9 +10,8 @@ public enum PACKET_TYPE {
     BROADCAST  ( -2 ), // BROADCASTING A MESSAGE TO EVERYONE 
     REPEAT     (  5 ), // IF USERNAME IS USED, SEND REPEAT INTRUCTION
     CREATE     (  8 ), // tells the server to create a new subgroup
-    JOIN       (  9 ), // JOIN NEW CHAT GROUP
-    ERR        (  7 ), // when somehting is wrong, can contain some directive. ( name, ... ) -> to refactor
-    OK          (  6 ); // OK STANDS FOR OLL KORRECT
+    BAN        ( -6 ), // tells the server to ban someone
+    JOIN       (  9 ); // JOIN NEW CHAT GROUP
 			
     private final byte value;
     private PACKET_TYPE( int b ) { this.value = ( byte ) b; }

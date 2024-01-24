@@ -1,6 +1,9 @@
 package com.java.crypto;
 
 import java.util.Scanner;
+
+import com.happycli.java.*;
+
 import static com.java.crypto.Encryption.Utils.*;
 
 /**
@@ -48,8 +51,16 @@ public class App
             clientName = scanner.nextLine();
 
             if ( correctNameNomenclature ( clientName ) ) break;
-            else { System.out.println( "[ERROR] incorrect name. Your name must be in ascii letters only, " + 
-                    "without special characters and containing atleast 4 characters." ); continue; }
+            else {
+                System.out.println( 
+                        new TextureBuilder().content( 
+                            "[ERROR] incorrect name. Your name must be in ascii letters only, " + 
+                            "without special characters and containing atleast 4 characters." 
+                        ).underline ( true ).foreground ( PaintOptions.RED ).build()
+                );
+
+                continue; 
+            }
         }
 
         return clientName;

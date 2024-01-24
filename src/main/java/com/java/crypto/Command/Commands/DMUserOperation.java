@@ -2,9 +2,11 @@ package com.java.crypto.Command.Commands;
 
 import java.util.ArrayList;
 
-import com.java.crypto.Command.Action;
+import com.java.crypto.Command.Commands.helpers.*;
+import com.java.crypto.Command.Action            ;
 import com.java.crypto.Command.Commands.Parseable;
-import com.java.crypto.Command.Sender;
+import com.java.crypto.Command.Sender            ;
+
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
@@ -15,8 +17,9 @@ import com.java.crypto.Packet.Packet;
 public class DMUserOperation implements Action, Parseable{
 
     // we store the specified args here.
-    private String targetUser = "";
-    private String content    = "";
+    private String targetUser = ""  ;
+    private String content    = ""  ;
+    private Parser parser     = null;
     private Sender sender;
 
     public DMUserOperation(){}
@@ -28,58 +31,54 @@ public class DMUserOperation implements Action, Parseable{
 
     // here we'll figure out what is the user
     // and what's the msg content;
-    private static final char COMMAND_PREFIX = '-';
-    private static final char USER_SPECIFICATION = 'u';
-    private static final char MESSAGE_SPECIFICATION = 'm';
+    private static final String FLAG_USER_SPECIFICATION    = "-u";
+    private static final String FLAG_MESSAGE_SPECIFICATION = "-m";
 
     @Override
     public void parse (String input )
     {
+        this.parser = new Parser ( new Lexer ( input ) );
+        parser.parse();
+    }
 
-        String username = "";
-        String msg      = "";
+    @Override
+    public boolean eval(){
+        ArrayList<String> name_s = parser.struct.get ( FLAG_USER_SPECIFICATION )   ;
+        ArrayList<String> msg_s  = parser.struct.get ( FLAG_MESSAGE_SPECIFICATION );
 
-        boolean isUser= false;
-        boolean isMsg = false;
-        boolean isCmd = false;
+        boolean is_name = validate_name( name_s );
+        boolean is_msg  = validate_msg( msg_s   );
 
-        // let's read each char
-        for ( char ch : input.toCharArray())
+        if (is_name)
         {
-            // we stumble upon the '-'
-            if ( ch == COMMAND_PREFIX )
-            { isCmd = true; }
-            else 
-            {
-                if ( isCmd )
-                {
-                    if ( ch == USER_SPECIFICATION )
-                    {
-                        isUser = true ;
-                        isMsg  = false;
-                        isCmd  = false;
-                    }
-                    else if ( ch == MESSAGE_SPECIFICATION )
-                    {
-                        isMsg  = true ;
-                        isUser = false;
-                        isCmd  = false;
-                    }
-                    else { continue; }
-                }
-                else
-                {
-                    if ( isUser )     { username += ch; }
-                    else if ( isMsg ) { msg      += ch; } 
-                    else              { continue;  }
-                }
-            }
+            this.targetUser = name_s.get ( 0 );
+        }
+        else
+        {
+            System.out.println(
+                "[ERROR] The target user is not specified or supplied more than one username. Type /help -c dm, for more information" 
+            );
+            return false;
         }
 
-        this.targetUser = username.trim();
-        this.content    = msg.trim()    ;
 
+        if (is_msg)
+        {
+            this.content = msg_s.get ( 0 );
+        }
+        else 
+        {
+            System.out.println ( 
+                "[ERROR] The message to be sent is not specified. Type /help -c dm, for more information" 
+            );
+            return false;
+        }
+
+        return true;
     }
+    
+    private boolean validate_name ( ArrayList<String> name_s ) { return name_s != null && name_s.size() == 1;     }
+    private boolean validate_msg  ( ArrayList<String> msg_s  ) { return msg_s  != null;/*&& msg_s.size()  == 1;*/ } 
 
     // for DEBUGGING PURPOSES ONLY
     public String getUserTarget()
@@ -95,26 +94,14 @@ public class DMUserOperation implements Action, Parseable{
 
     @Override
     public void execute() {
+        boolean is_eval = this.eval();
 
-        // first check if the user and the msg is defined
-        if ( targetUser.isEmpty() )
-        {
-            System.out.println("ERROR, you need to specify the user target. Use /help.");
-            return;
+        if ( is_eval ){
+            String msg = this.targetUser + "," + this.content;
+            PACKET_TYPE type = PACKET_TYPE.PRIVATE;
+            Packet packet = new Packet(msg, type);
+            this.sender.send(packet);
         }
-
-        if ( this.content.isEmpty())
-        {
-            System.out.println("ERROR, you need to specify the content you want to send. Use /help.");
-            return;
-        }
-
-
-        String msg = this.targetUser + "," + this.content;
-        PACKET_TYPE type = PACKET_TYPE.PRIVATE;
-        Packet packet = new Packet(msg, type);
-
-        this.sender.send(packet);
     }
 
 }

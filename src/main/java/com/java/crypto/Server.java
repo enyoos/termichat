@@ -30,6 +30,7 @@ public class Server {
 
             String msg = String.format( "[%d, %s] listening for incoming connection", port, name);
             System.out.println( msg );
+
             this.listen();
 
         }catch( IOException e )

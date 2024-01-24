@@ -34,6 +34,24 @@ public class Pool implements Runnable
 
     public Pool() { this.lookup = new HashMap<>(); }
 
+    // shall we do ip ban ?
+    // to prevent ban evasion ?
+    // perhaps some hardware limitation ( MAC ADDR )
+    public void add ( String ip, Integer time )
+    {
+        ArrayList<String> result = this.lookup.get ( time );
+
+        if ( result != null ) result.add ( ip ); // cool ?
+        else             
+        { 
+            Integer key             = time;
+            ArrayList<String> value = new ArrayList<>();
+
+            value.add ( ip );
+            this.lookup.put ( key, value );
+        }
+    }
+
     @Override
     public void run ()
     {
@@ -57,6 +75,10 @@ public class Pool implements Runnable
             else continue;
         }
     }
+
+    @Override
+    public String toString() { return this.lookup.toString(); }
+
 
     private boolean evade_banned ( int time_code ) 
     {
