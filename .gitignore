@@ -1,5 +1,3 @@
-test_packet.bat
 target/
 todo
-*sh
-*bat
+*.png

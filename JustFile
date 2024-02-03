@@ -28,3 +28,7 @@ timer:
 
 stats:
 	@git diff --shortstat
+
+draw:
+	@mvn package && java -cp target/classes com.java.crypto.Draw.Draw
+

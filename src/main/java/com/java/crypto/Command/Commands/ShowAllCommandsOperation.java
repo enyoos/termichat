@@ -1,37 +1,42 @@
 package com.java.crypto.Command.Commands;
 
-import com.java.crypto.Client;
-import com.java.crypto.Command.Action;
-import com.java.crypto.Command.Sender;
-import com.java.crypto.Client;
-import com.java.crypto.Packet.PACKET_TYPE;
-import com.java.crypto.Packet.Packet;
-import static com.java.crypto.Encryption.Utils.*;
+import java.util.ArrayList;
+
+import com.java.crypto.Client                    ;
+import com.java.crypto.Command.Action            ;
+import com.java.crypto.Command.Sender            ;
+import com.java.crypto.Client                    ;
+import com.java.crypto.Packet.PACKET_TYPE        ;
+import com.java.crypto.Packet.Packet             ;
+import com.java.crypto.Command.Commands.helpers.*;
 import com.java.crypto.Command.Commands.Parseable;
 
+import static com.java.crypto.Encryption.Utils.*;
 
 public class ShowAllCommandsOperation implements Action, Parseable{
 
     private static final String DELIMITER                = "------------------";
-    private static final String COMMAND_PARTICULAR_FLAG  = "-c";
-    private static final String COMMAND_PARTICULAR_FLAGG = "--command";
-    private String commandInParticular                   = "";
-    private static final String[] COMMANDS_DESCRIPTION   = {
-        "info            shows all the information concerning the client ( you )",
+    private static final String FLAG_COMMAND_PARTICULAR_ = "-c";
+
+    private static final String[] COMMANDS_DESCRIPTIONS  = {
         "ping            pings the server and returns pong!",
+        "sinfo           returns the name of the server    ",
+        "list            returns list of all the users in the group chat.                  (-l/limit of the users to show                                                    )",
         "exit            exits the group chat instance",
-        "sever_info      returns the name of the server    ",
-        "list            returns list of all the users in the group chat.                  (-l/limit of the users to show                                                             )",
-        "dm              sends a private msg to some user                                  (-m/specify message, -u/specify user                                                       )",
-        "help            shows all the commands, or details a particular command           (-c/name of unique cmd                                                                     )",
-        "create          creates special group                                             (-n/name of the group chat                                                                 )",
-        "listgc          shows all the groups currently active                             (-l/limit of the gc to show                                                                )",
-        "join            joins the specified group chat ( gc )                             (-n/name of the group chat                                                                 )",
-        "ban             ban someone or a specific gc                                      (-n/name of the user, -t/duration (min) of the ban, -r/explicit reason of the ban          )",
-        "close           close a group chat                                                (-n/name of the group chat                                                                 )",
+        "dm              sends a private msg to some user                                  (-m/specify message, -u/specify user                                              )",
+        "help            shows all the commands, or details a particular command           (-c/name of unique cmd.s                                                            )",
+        "info            shows all the information concerning the client ( you )",
+        "create          creates special group                                             (-n/name of the group chat                                                        )",
+        "listgc          shows all the groups currently active                             (-l/limit of the gc to show                                                       )",
+        "join            joins the specified group chat ( gc )                             (-n/name of the group chat                                                        )",
+        "ban             ban someone or a specific gc                                      (-n/name of the user, -t/duration (min) of the ban, -r/explicit reason of the ban )",
+        "close           close a group chat                                                (-n/name of the group chat                                                        )",
     };
 
-    private Sender sender;
+    private Sender sender          ;
+    private ArrayList<String> cmd_s;
+    private Parser parser          ;
+
     public ShowAllCommandsOperation(){}
     public ShowAllCommandsOperation( Sender sender, String input )
     {
@@ -42,66 +47,97 @@ public class ShowAllCommandsOperation implements Action, Parseable{
     @Override
     public void parse(String input)
     {
-        String[] tokens               = input.split(" ");
-        boolean isCommandInParticular = false;
-
-        for ( String token : tokens )
-        {
-            if ( token.equals(COMMAND_PARTICULAR_FLAG) )
-            { isCommandInParticular = true; }
-            else
-            {
-                if ( isCommandInParticular ) { this.commandInParticular = token.trim(); 
-                    isCommandInParticular = false; }
-                else continue;
-            }
-        }
+        this.parser = new Parser ( new Lexer ( input ) );
+        this.parser.parse();
     }
 
     @Override
-    public boolean eval(){return false;}
+    public boolean eval()
+    {
+        ArrayList<String> command_s = this.parser.struct.get ( FLAG_COMMAND_PARTICULAR_ ); 
+        boolean is_commands         = validate_commands( command_s );
+
+        if ( is_commands )
+        { 
+            this.cmd_s = command_s; 
+            return true;
+        }
+        else
+        {
+            this.cmd_s = new ArrayList<>();
+            return false;
+        }
+    }
+
+    private void ignore(){}
+
+    // returns -1 if the element is not present
+    // returns <value> the position of the element
+    private int retrieve_idx_command ( String some_cmd )
+    {
+        int length = Client.COMMANDS.length;
+        String cmd = "";
+
+        for ( int i = 0; i < length; i ++ )
+        {
+            cmd = Client.COMMANDS[i];
+            if ( cmd.equals ( some_cmd ) ) return i;
+            else continue;
+        }
+
+        return -1;
+    }
+
+    private boolean validate_commands ( ArrayList<String> command_s )
+    { return command_s != null && command_s.size() > 0; }
 
     @Override
     public void execute() {
+
+        boolean is_eval = this.eval();
 
         StringBuilder sb = new StringBuilder();
         sb.append(DELIMITER);
         sb.append("<command_name>            <usage>(...<flags>)\n");
 
-        System.out.println("the command : " + this.commandInParticular);
-
-        if ( this.commandInParticular.isEmpty() )
+        if ( is_eval )
         {
-            // always add 12 space
-            sb.append(""   + COMMANDS_DESCRIPTION[0]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[1]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[2]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[3]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[4]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[5]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[6]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[7]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[8]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[9]);
-            sb.append("\n" + COMMANDS_DESCRIPTION[10]);
+            // we check if all the commands are existing
+            for ( String cmd : this.cmd_s )
+            {
+                int res = retrieve_idx_command( cmd );
+                if ( res != -1 ) continue;
+                else
+                {
+                    System.out.println( 
+                        "[ERROR] The command : " + cmd + " doesn't exist. Maybe you meant : " + lev ( cmd, Client.COMMANDS) 
+                    );
+
+                    return;
+                }
+            }
+            
+            for ( String cmd : this.cmd_s )
+            {
+                int res = retrieve_idx_command( cmd );
+                sb.append ( "\n" + COMMANDS_DESCRIPTIONS[res] );
+            }
+
         }
         else 
         {
-            // check if that command in particular exist
-            if (isCommandExist(this.commandInParticular) )
-            {
-                for ( int i = 0; i < Client.COMMANDS.length; i ++ )
-                {
-                    if ( this.commandInParticular.equals(Client.COMMANDS[i]) )
-                    { sb.append( COMMANDS_DESCRIPTION[i] ); }
-                }
-            }
-            else { 
-                System.out.println("The command specified as an argument doesn't exist. Maybe you meant : " + lev ( this.commandInParticular, Client.COMMANDS ) );
-
-		return; // exit the function ...
-            }
-       }
+            sb.append(""   + COMMANDS_DESCRIPTIONS[0]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[1]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[2]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[3]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[4]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[5]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[6]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[7]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[8]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[9]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[10]);
+        }
 
 
         sb.append( "\n" )   ;
@@ -109,21 +145,6 @@ public class ShowAllCommandsOperation implements Action, Parseable{
 
         System.out.println(sb);
 
-        // you don't even need to send ( it is client side ) ...
-        // PACKET_TYPE type = PACKET_TYPE.PRIVATE;
-        // Packet packet = new Packet(sb.toString(), type);
-        
-        // this.sender.send(packet);
-    }
-
-    private boolean isCommandExist( String cmd )
-    {
-        for ( String cmd_ : Client.COMMANDS )
-        {
-            if ( cmd.equals(cmd_) ) { return true; }
-        }
-        
-        return false;
     }
     
 }

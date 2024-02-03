@@ -1,2 +1,10 @@
 always git add * when there's no error ( in that way, we can revert to the provious version if there's a FATAL and MYSTERIOUS error ).
-rendu : ListAllClientsNameOP....
+rendu drawing ( com.java.crypto.Draw.Draw )
+
+note : commit at each 600 insertions ( not taking into account the deletions ).
+o
+
+BUGS
+{
+    getting the name wrong ( not handling the connect )
+}

@@ -1,6 +1,8 @@
 package com.java.crypto;
 
 import java.util.Scanner;
+import static com.java.crypto.Draw.Draw.*;
+import java.util.NoSuchElementException;
 
 import com.happycli.java.*;
 
@@ -17,30 +19,17 @@ public class App
 
     public static void main( String[] args )
     {
-
-        // instantiate the server
-        // since we've the ability to execute the server alone
-        // we don't need these lines of code
-        // Thread serverThread = new Thread( new Runnable() {
-        //     @Override
-        //     public void run ()
-        //     {
-        //         int PORT = 5055;
-        //         String serverName = "server 1";
-        //         Server server = new Server(serverName, PORT);
-        //     }  
-        // });
-
-        // serverThread.start();
-
-        // now back to the main thread
-        // we will run the client
+        // display intro ( name of the app, like in hacker movies )
+        String intro = intro();
+        System.out.println( intro );
+        // 
 
         Client client = new Client(promptUsername(), PORT);
     }
 
     public static String promptUsername ( )
     {
+
         boolean writing   = true;
         String clientName = "";
         String prompt     = "What's your username ? : ";
@@ -48,7 +37,14 @@ public class App
         while ( writing ){
 
             System.out.print( prompt );
-            clientName = scanner.nextLine();
+
+            try{
+                clientName = scanner.nextLine();
+            }
+            catch ( NoSuchElementException e ){
+                System.out.println( "\nExiting main context. Thanks for using TERMICHAT" );
+                System.exit ( 0 );
+            }
 
             if ( correctNameNomenclature ( clientName ) ) break;
             else {

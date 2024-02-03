@@ -32,11 +32,23 @@ public class Client {
     private static final long TIME_OUT       = 500;
     // the info command is for debugging purposes
     public static String[] COMMANDS          = {
-        "ping", "server_info", "list", "exit","dm","help", "info", "create", "listgc", "join", "ban"
+        "ping",
+        "sinfo",
+        "list",
+        "exit",
+        "dm",
+        "help", 
+        "info", 
+        "create", 
+        "listgc", 
+        "join", 
+        "ban", 
+        "close",
     };
 
     private volatile boolean RECEIVEDPACKET  = false;
     private static char COMMAND_DELIMITER    = '/';
+    private static long start                = 0;
     private static final String DEFAULT_HOST = "localhost";
     private static final String ALGORITHM    = "AES";
     private BigInteger MIXED_KEY                    ;
@@ -117,10 +129,9 @@ public class Client {
     public void mainLoop()
     {
         // sedning also the key
-        // sendKey();
-
-        // sendNameAndKey ();
         sendNamePacket ();
+
+        sendKey();
         inputTask      ();
 
         while( this.socket.isConnected() ) { receivePacket(); }
@@ -215,6 +226,7 @@ public class Client {
 
                 if ( command.equals( COMMANDS[0]) )
                 {
+                    start = System.currentTimeMillis();
                     command_ = new PingServerOperation(sender);
                     command_.execute();
                 }
@@ -247,6 +259,9 @@ public class Client {
                 else if ( command.equals(COMMANDS[5]) )
                 {
                     input    = splitAtFirstOccurenceOf( " ", input )[1];
+
+                    System.out.println( "input : " + input );
+
                     command_ = new ShowAllCommandsOperation(sender, input);
                     command_.execute();
                 }
@@ -271,8 +286,18 @@ public class Client {
                 else if ( command.equals(COMMANDS[9]) )
                 {
                     input    = splitAtFirstOccurenceOf( " ", input )[1];
+
+                    // before joining, we reinit our data.
+                    // we generate our key
+                    // then send it ( after the execute statement ).
+                    this.sk     = null;
+                    this.tempSk = null;
+                    this.genKey()     ;
+
                     command_ = new JoinGroupChatOperation( sender, input );
                     command_.execute();
+                    sendKey();
+
                 }
                 else if ( command.equals(COMMANDS[10]) )
                 {
@@ -311,7 +336,14 @@ public class Client {
     }
 
     // handling the events.
-    private void handleDisconnectEvent ( Packet packet ) { System.out.println( packet.getMsg() )                ;}
+    private void handleDisconnectEvent ( Packet packet ) { 
+
+        String msg = packet.getMsg();
+        System.out.println(
+            tb.content(msg).underline(true).bold(true).blink(true).build()
+        );
+
+    ;}
     private void handleInvalidUsernameEvent ( Packet packet ) {
 
 	    // interrrupt the key receival
@@ -348,11 +380,6 @@ public class Client {
 	    // bfore even sending your name
 	    System.out.println("[LOGGING] sending the mixed key to the server.");
 	    byte[] bytes   = this.MIXED_KEY.toByteArray() ;
-        boolean hasSK_ = this.sk != null;
-
-        if ( hasSK_ ) bytes = concatArray ( hasSK, bytes );
-        else          bytes = concatArray ( notHasSk, bytes );
-
 	    Packet firstDefaultPacket = new Packet( bytes , PACKET_TYPE.KEY);
 
         sendPacket ( firstDefaultPacket );
@@ -371,38 +398,18 @@ public class Client {
 	    
     }
 
+    private void ignore(){};
+
     private void handleKeyEvent ( Packet packet ) {
 
         byte[] bytes   = packet.getMsg_();
 
-        // read the first byte
-        byte firstByte = bytes[0];
-
-        switch ( firstByte )
-        {
-            case 1:
-
-                // that means that the other client has a secret key
-                System.out.println( "[LOGGING] The other client has a secret key" );
-                setKey(trimArrayByOne ( bytes ) );
-                break;
-
-            case 0:
-
-                setKey (trimArrayByOne( bytes ) );
-                // that means that the other client dont have a secret key
-                // updateKey();
-                // check if the key received is the same diffie as us
-                // meaning ( we alredy did the exchange )
-                if ( !compare( trimArrayByOne( bytes ), this.MIXED_KEY.toByteArray( ))) {
-                    sendKey();
-                }
-                else System.out.println( "[LOGGING] already did the exchange" );                    
-                break;
-
-            default:
-                System.out.println( "[LOGGING, WARNING] leading byte unsupported during the key exchange" );
-                break;
+        // we check if we have already a private key
+        boolean hasSK = this.sk != null;
+        if ( hasSK ) ignore();
+        else         {
+            setKey ( bytes);
+            sendKey(      );
         }
 
     }
@@ -410,13 +417,10 @@ public class Client {
     // we shouldn't renew, rather update the keys ( the secret keys becomes the newly mixed key )
     private void updateKey ()
     {
-        System.out.println( "[LOGGING] updating the keys ..." );
-
         // our new diffieKey becomes the secret
-        boolean hasSk = this.tempSk != null;
+        boolean hasSk = this.sk != null;
         if ( hasSk ) 
         {
-            System.out.println( "[LOGGING] assigning the diffie key to the secret key" );
             this.diffieKey  = this.tempSk;
         }
 
@@ -424,20 +428,16 @@ public class Client {
 
         this.sk     = null;
         this.tempSk = null;
-
-        this.sendKey();
     }
 
     // generates the mixed Key from an initial key
     private void genMKey( ) { 
         this.MIXED_KEY = this.G.modPow ( this.diffieKey, P );
-        System.out.println ( "[LOGGING] generated the mixed key with value : " + this.MIXED_KEY );
     }
 
     public void genKey ( )
     {
 
-        System.out.println( "[LOGGING] generating a new key" );
         this.diffieKey = gKey ( SIZE_KEY_BIT );
         genMKey();
 
@@ -480,9 +480,16 @@ public class Client {
     // the join response 
     private void handleJoinResponse ( String respContent ) {
 
+        // change the gc name;
+        // get the idx for ':' increment it and substring until the end.
+
         String[] tokens       = splitAtFirstOccurenceOf(",", respContent);
         this.currentGrpName   = tokens[0];
         String out            = tokens[1];
+
+        int idx               = out.indexOf( ':' )      ;
+        String gcName         = out.substring( idx + 1 );
+        this.currentGrpName   = gcName                  ;
 
         handleOKResponse( out );
     }
@@ -516,9 +523,11 @@ public class Client {
         "joined", // succesfully joined a group chat
         "list"  , // shows a list of all the users in some group chat
         "dm"    , // dm from someone
+        "pong"  , // receiving the pong response
     };
 
     private void handleResponseEvent ( Packet packet ) {
+
 
         String[] tokens    = splitAtFirstOccurenceOf( ",", packet.getMsg() );
         String respType    = tokens[0];
@@ -540,7 +549,29 @@ public class Client {
         else if ( respType.equals ( RESPONSES[4]) )
         { handleDMResponse( respContent )  ; }
 
-        else {}
+        else if ( respType.equals ( RESPONSES[5]) )
+        { handlePongResponse( respContent )  ; }
+
+        else { handleUnknownResponse(respType, respContent); }
+    }
+
+    private void handlePongResponse( String rc )
+    { 
+        long pong_time = System.currentTimeMillis() - start;
+        rc            += " [" + " " + pong_time + " ms " + "]"; 
+        String out     = tb.content ( rc ).underline( true ).bold(true).blink(true).foreground(PaintOptions.GREEN).build();
+
+        System.out.println ( out );
+        tb.clear();
+    }
+
+    private void handleUnknownResponse(String rt, String rc)
+    {
+        String msg = "[LOGGING] Unknown response type : " + rt + " with content : " + rc;
+        String out = tb.content ( msg ).underline ( true ).bold( true ).blink( true ).build();
+        System.out.println ( out );
+
+        tb.clear();
     }
 
     private void handleOKEvent ( Packet packet ) { System.out.println( "[SERVER] 200 OK!" )   ;}

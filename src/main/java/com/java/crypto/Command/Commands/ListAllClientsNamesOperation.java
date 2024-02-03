@@ -1,19 +1,21 @@
 package com.java.crypto.Command.Commands;
 
-import com.java.crypto.Client;
+import java.util.ArrayList;
 
-import com.java.crypto.Command.Action;
+import com.java.crypto.Command.Action            ;
 import com.java.crypto.Command.Commands.Parseable;
-import com.java.crypto.Command.Sender;
-import com.java.crypto.Packet.PACKET_TYPE;
-import com.java.crypto.Packet.Packet;
+import com.java.crypto.Command.Commands.helpers.*;
+import com.java.crypto.Client                    ;
+import com.java.crypto.Command.Sender            ;
+import com.java.crypto.Packet.PACKET_TYPE        ;
+import com.java.crypto.Packet.Packet             ;
 
 public class ListAllClientsNamesOperation implements Action, Parseable{
 
     private static final String FLAG_SPEC_LIMIT = "-l";
 
     private Sender sender;
-    private Integer limit;
+    private int     limit;
     private Parser parser;
 
     public ListAllClientsNamesOperation(){}
@@ -30,38 +32,52 @@ public class ListAllClientsNamesOperation implements Action, Parseable{
     public boolean eval()
     {
         ArrayList<String> limit_s = this.parser.struct.get ( FLAG_SPEC_LIMIT );
-        boolean is_limit          = 
+        boolean is_limit          = validate_limit( limit_s );
+
+        if ( is_limit )
+        {
+            try{
+                this.limit = Integer.parseInt ( limit_s.get ( 0 ) );
+            }
+            catch ( NumberFormatException e )
+            {
+                System.out.println( "[ERROR] The Integer supplied is invalid" );
+                return false;
+            }
+            return true;
+        }
+        
+        return false;
     }
 
     private boolean validate_limit ( ArrayList<String> limit_s )
     {
         boolean isnt_null = limit_s != null    ;
-        boolean has_one   = limit_s.size() == 1;
-
-        if ( isnt_null && has_one ) {
-            try{
-                Integer.parse ( limit_s.get ( 0 ) );
-            }
-        }
+        if ( isnt_null ){ return limit_s.size() == 1; }
+        return false;
     }
 
     @Override
     public void execute() {
+        boolean is_eval = this.eval();
 
-        String msg;
-        PACKET_TYPE type = PACKET_TYPE.RESPONSE;
-
-        if ( this.limit != null ) 
+        if ( is_eval )
         {
-            int limitValue = this.limit.intValue();
-            msg            = limitValue + "," + Client.COMMANDS[2];
+            String msg       = this.limit + "," + Client.COMMANDS[2];
+            PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+            Packet packet    = new Packet(msg, type);
+
+            this.sender.send(packet);
         }
-        else {
-            msg    = Client.COMMANDS[2];
+        else
+        {
+            String msg       = Client.COMMANDS[2];
+            PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+            Packet packet    = new Packet(msg, type);
+
+            this.sender.send(packet);
         }
 
-        Packet packet = new Packet(msg, type);
-        this.sender.send(packet);
     }
 
 }

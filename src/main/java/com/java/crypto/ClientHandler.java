@@ -225,7 +225,7 @@ public class ClientHandler implements Runnable{
             Packet letDUserKnow = new Packet ( "joined,You joined the gc : " + gcName, PACKET_TYPE.RESPONSE );
             sendPacket ( letDUserKnow );
 
-            String msg = String.format ( "ok,%s joined the group chat", this.client.getName() );
+            String msg = String.format ( "%s joined the group chat", this.client.getName() );
             Packet letDOtherUsersKnow = new Packet ( msg, PACKET_TYPE.CONNECT );
 
             broadcast( letDOtherUsersKnow );
@@ -293,7 +293,8 @@ public class ClientHandler implements Runnable{
 
         String command       = packet.getMsg();
         String optionalValue = "";
-        int limit            = GROUPS.size();
+        int limit_client     = currentGrp.clients.size();
+        int limit_gcs        = GROUPS.size();           
         
         if ( command.contains ( "," ) )
         {
@@ -310,10 +311,10 @@ public class ClientHandler implements Runnable{
                 // by default we check if it is greater than the number
                 // of users in the DEFAULT GROUP
                 boolean outBounds = temp > GROUPS.get(0).clients.size();
-                limit             = outBounds ? GROUPS.get(0).clients.size() : temp;
+                limit_client      = outBounds ? GROUPS.get(0).clients.size() : temp;
             }
 
-            sendListOfUsersIncludingSelf( limit ); 
+            sendListOfUsersIncludingSelf( limit_client ); 
         }
 
         // handlign the server_info command
@@ -331,10 +332,10 @@ public class ClientHandler implements Runnable{
 
                 int temp          = Integer.parseInt(optionalValue);
                 boolean outBounds = temp > GROUPS.size();
-                limit             = outBounds ? GROUPS.size() : temp;
+                limit_gcs         = outBounds ? GROUPS.size() : temp;
             }
 
-            sendListOfGroupChats( limit ); 
+            sendListOfGroupChats( limit_gcs ); 
         }
         
         else if ( command.equals(COMMANDS[4]))
@@ -386,7 +387,7 @@ public class ClientHandler implements Runnable{
         Packet packet = new Packet();
 
         PACKET_TYPE type = PACKET_TYPE.RESPONSE;
-        String resp = "ok,Pong, server!";
+        String resp = "pong,Pong, server!";
 
         packet.setMsg(resp);
         packet.setType(type);
@@ -440,6 +441,7 @@ public class ClientHandler implements Runnable{
         packet.setType(PACKET_TYPE.RESPONSE);
 
         try{
+
             this.os.write(packet.output());
             this.os.flush();
         }catch (IOException e ) {System.out.println( "[ERROR] couldn't send the result of the command with value : " + COMMANDS[0]);}
@@ -459,7 +461,7 @@ public class ClientHandler implements Runnable{
     {
 
         // remove the user from the 
-        String msg = "ok,[SERVER] The user " + client.getName() + " has something better to do !";
+        String msg = "[SERVER] The user " + client.getName() + " has something better to do !";
         PACKET_TYPE type = PACKET_TYPE.DISCONNECT;
 
         packet.setType(type);

@@ -42,8 +42,11 @@ public class Parser
         else {
 
             ArrayList<String> temp = struct.get ( op );
-            temp.add ( next );
-            struct.put ( op, temp );
+
+            if ( temp != null ){
+                temp.add ( next );
+                struct.put ( op, temp );
+            }
 
             __parse ( op );
         }

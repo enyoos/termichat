@@ -1,17 +1,21 @@
 package com.java.crypto.Command.Commands;
 
+import java.util.ArrayList;
+
 import com.java.crypto.Command.Action;
 import com.java.crypto.Client;
 import com.java.crypto.Command.Sender;
+import com.java.crypto.Command.Commands.helpers.*;
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet;
 
 public class ShowAllGroupChatsOperation implements Action, Parseable
 {
-    private static final String FLAG = "-l";
+    private static final String FLAG_SPEC_LIMIT = "-l";
 
     private Sender sender;
     private Integer limit;
+    private Parser parser;
 
     public ShowAllGroupChatsOperation (){}
     public ShowAllGroupChatsOperation (Sender sender, String input) {
@@ -22,51 +26,60 @@ public class ShowAllGroupChatsOperation implements Action, Parseable
     @Override
     public void parse( String input )
     {
-        String[] tokens = input.split ( " " );
-        boolean isFlag  = false;
-        Integer max     = null;
-        
-        for ( String token : tokens )
-        {
-            if ( token.contains ( FLAG ) ) isFlag = true;
-            else if ( isFlag ) 
-            {
-                try {
-                    max = Integer.parseInt ( token );
-                }
-                catch ( RuntimeException e ) { System.out.println( "[ERROR] you need to provide a valid number" ); }
-            }
-            else continue;
-        }
-
-        this.limit = max;
+        this.parser = new Parser ( new Lexer ( input ) );
+        this.parser.parse();
     }
 
     @Override
-    public boolean eval(){return false;}
+    public boolean eval(){
+        ArrayList<String> limit_s = this.parser.struct.get ( FLAG_SPEC_LIMIT );
+        boolean is_limit          = validate_limit( limit_s );
+
+        if ( is_limit )
+        {
+            try{
+                this.limit = Integer.parseInt ( limit_s.get ( 0 ) );
+            }
+            catch ( NumberFormatException e )
+            {
+                System.out.println( "[ERROR] The Integer supplied is invalid" );
+                return false;
+            }
+            return true;
+        }
+        
+        return false;   
+    }
+
+    private boolean validate_limit ( ArrayList<String> limit_s )
+    {
+        boolean isnt_null = limit_s != null    ;
+        if ( isnt_null ){ return limit_s.size() == 1; }
+        return false;
+    }
+
 
     @Override
     public void execute()
     {
+        boolean is_eval = this.eval();
 
-        String msg;
-        PACKET_TYPE type = PACKET_TYPE.RESPONSE;
-        Packet packet;
+        if ( is_eval )
+        {
+            String msg       = this.limit + "," + Client.COMMANDS[8];
+            PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+            Packet packet    = new Packet(msg, type);
 
-        // TODO 
-        if ( limit != null ) {
-
-            int limitValue = this.limit.intValue();
-
-            msg            = limitValue + "," +  Client.COMMANDS[8];
-            packet         = new Packet ( msg, type );
+            this.sender.send(packet);
         }
-        else {
-            msg    = Client.COMMANDS[8];
-            packet = new Packet ( msg, type );
+        else
+        {
+            String msg       = Client.COMMANDS[8];
+            PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+            Packet packet    = new Packet(msg, type);
 
+            this.sender.send(packet);
         }
 
-        this.sender.send ( packet );
     }
 }

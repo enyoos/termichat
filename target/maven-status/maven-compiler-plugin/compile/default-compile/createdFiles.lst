@@ -27,5 +27,6 @@ com\java\crypto\Command\Commands\ShowAllGroupChatsOperation.class
 com\java\crypto\Command\Commands\helpers\Lexer.class
 com\java\crypto\Entity.class
 com\java\crypto\Command\Commands\ShowAllCommandsOperation.class
+com\java\crypto\Draw\Draw.class
 com\java\crypto\Command\Commands\ExitChatApplicationOperation.class
 com\java\crypto\Command\Commands\JoinGroupChatOperation.class

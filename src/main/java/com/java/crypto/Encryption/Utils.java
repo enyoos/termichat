@@ -1,12 +1,11 @@
 package com.java.crypto.Encryption;
 
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidAlgorithmParameterException;
+
 import java.nio.charset.Charset;
-import javax.crypto.KeyGenerator;
+import java.nio.charset.StandardCharsets;
 import java.nio.ByteBuffer;
-import javax.crypto.spec.SecretKeySpec;
+
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.SecureRandom; 
@@ -21,7 +20,9 @@ import java.security.PublicKey;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.spec.X509EncodedKeySpec;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -31,7 +32,9 @@ import java.util.Map;
 import java.util.HashMap;
 
 import javax.crypto.AEADBadTagException;
+import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.BadPaddingException;
+import javax.crypto.KeyGenerator;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -89,12 +92,15 @@ public static String[] splitAtFirstOccurenceOf ( String pattern, String content 
     // check the first occurence of the comma
     int firstOccPattern = content.indexOf(pattern);
 
-    String leftPart = content.substring(0, firstOccPattern);
-    String rightPart= content.substring(firstOccPattern + 1);
+	if ( firstOccPattern != -1 ){
+		String leftPart  = content.substring(0, firstOccPattern );
+		String rightPart = content.substring(firstOccPattern + 1);
+		String[] ret     = { leftPart, rightPart };
 
-    String[] ret = { leftPart, rightPart };
-
-    return ret;
+		return ret;
+	}
+	
+	return new String[]{"", content};
 }
 
 // shoudl output 4x4 matrix

@@ -7,7 +7,7 @@ import java.util.HashMap  ;
 public class Pool implements Runnable
 {
 
-    private static final int ELAPSED = 60_000; // in ms, makes 60 sec -> 1 min
+    private static final long ELAPSED = 60_000; // in ms, makes 60 sec -> 1 min
 
     public static void main ( String... args )
     {
@@ -44,13 +44,15 @@ public class Pool implements Runnable
         if ( result != null ) result.add ( ip ); // cool ?
         else             
         { 
-            Integer key             = time;
+            Integer key             = offset_time( time );
             ArrayList<String> value = new ArrayList<>();
 
             value.add ( ip );
             this.lookup.put ( key, value );
         }
     }
+
+    private int offset_time ( int time ) { return time + this.timer_count; }
 
     @Override
     public void run ()
@@ -66,13 +68,11 @@ public class Pool implements Runnable
                     Thread.sleep ( ELAPSED );
                 } catch ( InterruptedException e ) { System.out.println("[ERROR] Sleep failed"); }
 
-                timer_count += 1;
+                // this could overflow ( there's no permaban, so it is less likely to happen)
+                timer_count += 1; 
                 boolean isEvaded = evade_banned( timer_count );
-
-                if ( isEvaded ) System.out.println( "Someone just got out !" );
-                else            System.out.println( "nothing happened" )      ;
-            }
-            else continue;
+           }
+            else timer_count = 0;
         }
     }
 
