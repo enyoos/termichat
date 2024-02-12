@@ -6,7 +6,7 @@ set shell := ["cmd.exe", "/c"]
 client:
 	@mvn package compile && mvn exec:java
 	
-server:
+srv   :
 	@mvn package && java -cp target/classes com.java.crypto.Server
 
 utils:
@@ -32,3 +32,5 @@ stats:
 draw:
 	@mvn package && java -cp target/classes com.java.crypto.Draw.Draw
 
+pool:
+	@mvn package && java -cp target/classes com.java.crypto.CustomStruct.Pool

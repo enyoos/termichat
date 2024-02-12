@@ -50,11 +50,11 @@ public class BanEntityOperation implements Action, Parseable
         // check if all the flags are specified
         ArrayList<String> names   = parser.struct.get ( FLAG_NAME )  ;
         ArrayList<String> times   = parser.struct.get ( FLAG_TIME )  ;
-        ArrayList<String> reasons = parser.struct.get ( FLAG_REASON );
+        // ArrayList<String> reasons = parser.struct.get ( FLAG_REASON );
 
         boolean is_names   = validate_name    ( names );
         boolean is_times   = validate_time    ( times );
-        boolean is_reasons = validate_reason( reasons );
+        // boolean is_reasons = validate_reason( reasons );
 
         if ( is_names )  handle_names( names );
         else{
@@ -68,24 +68,22 @@ public class BanEntityOperation implements Action, Parseable
             return false;
         }
 
-        if ( is_reasons )handle_reason( reasons.get ( 0 ) );
-        else             {
-            System.out.println( "[ERROR] The reason of the ban is not specified." );
-            return false;
-        }
+        // if ( is_reasons )handle_reason( reasons.get ( 0 ) );
+        // else             {
+        //     System.out.println( "[ERROR] The reason of the ban is not specified." );
+        //     return false;
+        // }
 
         return true;
     }
 
-
-    private boolean validate_name   ( ArrayList<String> names  ) { return names.  size() > 0 ; }
-    private boolean validate_time   ( ArrayList<String> times  ) { return times.  size() == 1; }
-    private boolean validate_reason ( ArrayList<String> reasons ){ return reasons.size() == 1; }
+    private boolean validate_name   ( ArrayList<String> names  ) { return names != null && names.size() > 0 ; }
+    private boolean validate_time   ( ArrayList<String> times  ) { return times != null && times.size() == 1; }
 
     private void handle_names (ArrayList<String> names)
     { 
         String repr  = names.toString();
-        this.targets = repr.substring ( 1, repr.length() );
+        this.targets = repr.substring ( 1, repr.length()-1 );
     }
 
     private void handle_time  ( String time )
@@ -109,10 +107,12 @@ public class BanEntityOperation implements Action, Parseable
     {
         boolean evaluated = this.eval();
 
+
         if ( evaluated )
         {
             // <names...>|<time>|<reason>
-            String msg       = String.format ( "%s|%d|%s", this.targets, this.time, this.reason ); 
+            String msg       = String.format ( "%s|%d", this.targets, this.time ); 
+            System.out.println( "exec : " + msg );
             PACKET_TYPE type = PACKET_TYPE.BAN;
             Packet packet    = new Packet ( msg, type );
 

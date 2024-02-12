@@ -11,6 +11,7 @@ public enum PACKET_TYPE {
     REPEAT     (  5 ), // IF USERNAME IS USED, SEND REPEAT INTRUCTION
     CREATE     (  8 ), // tells the server to create a new subgroup
     BAN        ( -6 ), // tells the server to ban someone
+    CLOSE      ( -9 ), // Close gc
     JOIN       (  9 ); // JOIN NEW CHAT GROUP
 			
     private final byte value;

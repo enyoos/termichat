@@ -9,6 +9,7 @@ C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Server.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Encryption\Utils.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\BanEntityOperation.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\ClientHandler.java
+C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\CloseGCOperation.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\ListAllClientsNamesOperation.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Packet\Packet.java
 C:\Users\ilyas\programming\termichat\src\main\java\com\java\crypto\Command\Commands\ExitChatApplicationOperation.java

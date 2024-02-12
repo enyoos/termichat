@@ -8,3 +8,15 @@ BUGS
 {
     getting the name wrong ( not handling the connect )
 }
+
+use a safe ArrayList java ArrayList.
+
+
+WEIRD STUFF :  
+    Exception in thread "Thread-0" java.lang.NullPointerException: Cannot invoke "com.java.crypto.Packet.PACKET_TYPE.getValue()" because "this.type" is null
+            at com.java.crypto.Packet.Packet.toString(Packet.java:114)
+            at java.base/java.lang.String.valueOf(String.java:4222)
+            at java.base/java.lang.StringBuilder.append(StringBuilder.java:173)
+            at com.java.crypto.ClientHandler.receivePacket(ClientHandler.java:100)
+            at com.java.crypto.ClientHandler.run(ClientHandler.java:777)
+            at java.base/java.lang.Thread.run(Thread.java:842)

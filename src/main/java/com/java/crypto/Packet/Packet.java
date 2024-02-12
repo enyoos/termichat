@@ -85,6 +85,10 @@ public class Packet {
                 type = PACKET_TYPE.BAN;
                 break;
 
+            case -9:
+                type = PACKET_TYPE.CLOSE;
+                break;
+
             default:
                 break;
         }

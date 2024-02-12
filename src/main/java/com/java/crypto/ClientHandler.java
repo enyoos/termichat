@@ -144,6 +144,10 @@ public class ClientHandler implements Runnable{
                     handleBanEvent ( packet );
                     break;
 
+                case CLOSE:
+                    handleCloseEvent( packet );
+                    break;
+
                 default:
                     handleUnknownPacket ( packet );
                     break;
@@ -155,12 +159,65 @@ public class ClientHandler implements Runnable{
         }
     }
 
+    private void handleCloseEvent( Packet packet )
+    {
+        String[] gcs = packet.getMsg().split( "," );
+        for ( String gc : gcs )
+        {
+            int ret = close ( gc );
+            if ( ret == 1 ) return  ;
+            else            continue;
+        }
+    }
+
+    private int close ( String grpName )
+    {
+        // check if the grpName exist
+        // and if authAdmin()
+        if ( gcNameUsed ( grpName ) && authAdmin( getGrp ( grpName ) ) )
+        {
+            GROUPS.remove ( getGrp ( grpName ) ); 
+            return 0;
+        }
+
+        PACKET_TYPE type = PACKET_TYPE.RESPONSE;
+        String      msg  = "error, [ERROR] Group chat name : " + grpName + " doesn't exist or you're not its admin";
+
+        sendPacket( new Packet ( msg, type ) );
+        return 1;
+    }
+
+    private Group getGrp ( String grpName )
+    {
+
+        for ( Group grp : GROUPS )
+        {
+            if ( grpName.equals ( grp.name ) ) return grp;
+            else                               continue  ;
+        }
+
+        return null;
+    }
+
+    private void sendPacketTo ( Entity client, Packet packet )
+    {
+        try{
+            OutputStream temp = client.getSocket().getOutputStream();
+
+            temp.write ( packet.output() );
+            temp.flush (        );
+        }
+        catch ( IOException e )
+        {
+            System.out.println( "something went wrong ... " );
+        }
+    }
 
     private boolean authAdmin () { return this.currentGrp.admin.equals ( this.client.getName() ); }
-    private void ban ( String name, int duration, String reason )
+    private boolean authAdmin ( Group grp ) { return grp.admin.equals( this.client.getName() ); }
+
+    private void ban ( String name, int duration )
     {
-        // send the packet with the reason
-        sendPacket ( new Packet ( reason, PACKET_TYPE.BAN ) );
 
         // kick the user from the currentGrp chat 
         // but the user can always re-enter
@@ -168,9 +225,21 @@ public class ClientHandler implements Runnable{
         // bannedPool for instance that evacuates itself by the time
         // like a timed-out cache ( to be implemented )
         // like an arrayList that manages it self
-        for ( Entity client : this.currentGrp.clients )
+        
+        Iterator<Entity> it = this.currentGrp.clients.iterator();
+
+        while ( it.hasNext() )
         {
-            if ( client.getName().equals ( name ) ) this.currentGrp.clients.remove ( client ); 
+            Entity cl = it.next();
+            if ( cl.getName().equals ( name ) )
+            {
+                this.currentGrp.bannedPool.add ( name, duration );
+                sendPacketTo( cl, new Packet ( PACKET_TYPE.BAN ) );
+                it.remove ( ); 
+
+                // then add the client to the default grp
+                this.DEFAULT_GROUP.clients.add ( cl );
+            }
             else                                    continue;
         }
 
@@ -178,18 +247,30 @@ public class ClientHandler implements Runnable{
 
     private void handleBanEvent ( Packet packet )
     {
-        String[] msg   = packet.getMsg ( ).split("|");
-        String[] names = msg[0].split(",");
+        String pattern = "\\|";
+        String[] msg   = packet.getMsg ( ).split(pattern);
+        System.out.println ( Arrays.toString( msg ) );
+
+        pattern        = ",";
+        String[] names = msg[0].contains(pattern) ? msg[0].split(",") : new String[]{msg[0]};
         String   time  = msg[1];
-        String reason  = msg[2];
 
         for ( String name : names )
         {
             // check if the user exist in the current group
-            if ( isUserExist( name ) ) ban ( name, Integer.parseInt ( time ), reason );
-            else                      continue;
+            if ( isUserExist( name ) && authAdmin() ) {
+                ban ( name, Integer.parseInt ( time ) );
+                return;
+            }
+            else                       continue;
         } 
 
+        sendPacket( 
+            new Packet ( 
+                "error,The user you're trying to ban doesn't exist or you don't have the admin status.",
+                PACKET_TYPE.RESPONSE 
+            ) 
+        );
     }
 
     private Optional<Group> gcPresent( String name )
@@ -210,25 +291,36 @@ public class ClientHandler implements Runnable{
             // and remove him from the precedent group
             // and broadcast disconnect packet to all the users 
             Group joined = opt.get();
-            joined.clients.add( this.client );
 
-            this.currentGrp.clients.remove( this.client );
-            Packet mockPacket = new Packet( );
+            if ( !joined.bannedPool.isBanned( this.client.getName() ) )
+            {
+                joined.clients.add( this.client );
 
-            boolean exit = false;
-            handleDisconnectEvent(mockPacket, false);
+                this.currentGrp.clients.remove( this.client );
+                Packet mockPacket = new Packet( );
 
-            this.currentGrp   = joined;
+                boolean exit = false;
+                handleDisconnectEvent(mockPacket, false);
 
-            // let the user know that he joined a new group
-            // and broadcast his new arrival
-            Packet letDUserKnow = new Packet ( "joined,You joined the gc : " + gcName, PACKET_TYPE.RESPONSE );
-            sendPacket ( letDUserKnow );
+                this.currentGrp   = joined;
 
-            String msg = String.format ( "%s joined the group chat", this.client.getName() );
-            Packet letDOtherUsersKnow = new Packet ( msg, PACKET_TYPE.CONNECT );
+                // let the user know that he joined a new group
+                // and broadcast his new arrival
+                Packet letDUserKnow = new Packet ( "joined,You joined the gc : " + gcName, PACKET_TYPE.RESPONSE );
+                sendPacket ( letDUserKnow );
 
-            broadcast( letDOtherUsersKnow );
+                String msg = String.format ( "%s joined the group chat", this.client.getName() );
+                Packet letDOtherUsersKnow = new Packet ( msg, PACKET_TYPE.CONNECT );
+
+                broadcast( letDOtherUsersKnow );
+            }
+            else 
+            {
+                int when       = this.currentGrp.bannedPool.when ( this.client.getName() );
+                String msg     = String.format ( "error,[ERROR] You're banned from this group. Rejoin in : " + when, gcName );
+                Packet packet_ = new Packet ( msg, PACKET_TYPE.RESPONSE );
+                sendPacket ( packet_ );
+            }
         }
 
         else
@@ -484,6 +576,17 @@ public class ClientHandler implements Runnable{
         {
             temp = grpIter.next();
             if ( temp.admin.equals(clientName) ) grpIter.remove();
+            else continue;
+        }
+
+        // but also remove him from the clients arrayList;
+        Iterator<Entity> entityIter = DEFAULT_GROUP.clients.iterator();
+        Entity           temp_      = null;
+
+        while ( entityIter.hasNext() )
+        {
+            temp_ = entityIter.next();
+            if ( temp_.getName().equals( clientName ) ) entityIter.remove();
             else continue;
         }
 

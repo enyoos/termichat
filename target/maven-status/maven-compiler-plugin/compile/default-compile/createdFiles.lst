@@ -17,6 +17,7 @@ com\java\crypto\Command\Sender.class
 com\java\crypto\App.class
 com\java\crypto\Command\Action.class
 com\java\crypto\Command\Commands\PingServerOperation.class
+com\java\crypto\Command\Commands\CloseGCOperation.class
 com\java\crypto\Client$2.class
 com\java\crypto\Packet\PACKET_TYPE.class
 com\java\crypto\Command\Commands\DMUserOperation.class

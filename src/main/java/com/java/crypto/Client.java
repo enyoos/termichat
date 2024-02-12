@@ -16,7 +16,6 @@ import com.happycli.java.*;
 
 import static com.java.crypto.Encryption.Utils.*;
 import static com.java.crypto.App.*             ;
-
 import com.java.crypto.Packet.PACKET_TYPE;
 import com.java.crypto.Packet.Packet     ;
 import com.java.crypto.Command.Action    ;
@@ -26,6 +25,9 @@ import com.java.crypto.Command.Commands.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.SecretKey           ;
 import javax.crypto.spec.SecretKeySpec  ;
+
+import java.util.concurrent.atomic.AtomicReference;
+
 
 public class Client {
 
@@ -73,8 +75,8 @@ public class Client {
     private Socket socket        ;
     private String name          ;
 
-    private String currentGrpName   = "default";
-    private final TextureBuilder tb = new TextureBuilder();
+    private volatile AtomicReference<String> currentGrpName   = new AtomicReference("default");
+    private final TextureBuilder tb                           = new TextureBuilder();
 
     // all the getters
     public String getName          () { return this.name      ; }
@@ -169,7 +171,7 @@ public class Client {
             public void run()
             {
 
-                String prompt   = String.format( "%s [%s] > ", name, currentGrpName );
+                String prompt   = String.format( "%s [%s] > ", name, Client.this.currentGrpName.get() );
                 boolean running = true                         ;
                 String command  = ""                           ;
                 Action command_ = null                         ;
@@ -303,6 +305,12 @@ public class Client {
                 {
                     input    = splitAtFirstOccurenceOf( " ", input )[1];
                     command_ = new BanEntityOperation( sender, input );
+                    command_.execute();
+                }
+                else if ( command.equals(COMMANDS[11]) )
+                {
+                    input    = splitAtFirstOccurenceOf( " ",  input )[1];
+                    command_ = new CloseGCOperation( sender, input );
                     command_.execute();
                 }
                 else 
@@ -484,12 +492,12 @@ public class Client {
         // get the idx for ':' increment it and substring until the end.
 
         String[] tokens       = splitAtFirstOccurenceOf(",", respContent);
-        this.currentGrpName   = tokens[0];
         String out            = tokens[1];
 
         int idx               = out.indexOf( ':' )      ;
         String gcName         = out.substring( idx + 1 );
-        this.currentGrpName   = gcName                  ;
+
+        this.currentGrpName.set( gcName );
 
         handleOKResponse( out );
     }
@@ -628,6 +636,10 @@ public class Client {
                 case KEY: 
                     handleKeyEvent( packet );
                     break;
+                
+                case BAN:
+                    handleBanEvent( packet );
+                    break;
 
                 default:
                     handleDefaultUnknownPacketEvent ( packet );
@@ -635,6 +647,15 @@ public class Client {
             }
 
         }catch ( IOException e ){ exitAppOnServerShutDown(); }
+    }
+
+    private void handleBanEvent ( Packet packet )
+    {
+        String msg = "YOU'VE BEEN BANNED. Reversing to DEFAULT group.";
+        msg        = tb.content( msg ).foreground(PaintOptions.BLUE).blink(true).underline(true).bold(true).build();
+
+        this.currentGrpName.set( "default" );
+        System.out.println( msg );
     }
 
     // the client can : SEND_PACKETS ( MSG to the server );
@@ -660,10 +681,11 @@ public class Client {
     }
 
     // static, so that this function can be called inside static context
-    private static void exitAppOnServerShutDown()
+    private void exitAppOnServerShutDown()
     {
         String msg = "The server couldn't take it anymore...";
-        System.out.println(msg);
+
+        handleErrResponse( msg );
         System.exit( 1 );
     }
 }

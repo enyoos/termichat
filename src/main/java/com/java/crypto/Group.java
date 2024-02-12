@@ -25,6 +25,9 @@ public class Group
     @Override
     public String toString () 
     { 
-        return "{admin : " + this.admin + ", name : " + this.name  + ", members : " + this.clients.toString() + ", wall of shame : " + this.bannedPool;
+        return "{admin : " + this.admin + 
+                ", name : " + this.name  +
+                ", members : " + this.clients.toString() +
+                ", wall of shame : " + this.bannedPool.lookup.values();
     }
 }
