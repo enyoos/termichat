@@ -1,19 +1,26 @@
 package com.java.crypto;
 
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.lang.Thread;
+
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 
 import javax.crypto.spec.IvParameterSpec;
 
 public class Server {
 
+    private static final int BACK_LOG = 100;  // number of awaiting conn
+    private static final String IP    = "192.168.859.672";
+    private static final String DNS   = "envyoos.xyz"    ;
+
     private ServerSocket ss;
     private String name;
 
     public static void main( String... args )
     {
+
         String sName = "server1";
         int    PORT  = 5055;
         Server server = new Server( sName, PORT );
@@ -24,8 +31,10 @@ public class Server {
 
     public Server ( String name, int port )
     {
+        InetAddress addr = InetAddress.getByName( DNS )      ;
+
         try {
-            ss = new ServerSocket( port );
+            ss = new ServerSocket( port, 100, addr );
             this.name = name;
 
             String msg = String.format( "[%d, %s] listening for incoming connection", port, name);

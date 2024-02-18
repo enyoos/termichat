@@ -106,6 +106,7 @@ public class Client {
             mainLoop()   ;
 
         }catch( IOException err ) {
+            System.out.println( err );
             exitAppOnServerShutDown();
         }
     }
@@ -716,6 +717,7 @@ public class Client {
             // if we're here, then the server must have shut down.
             // we show to the user that the server shut down.
             // exit the application with status 1 ( error )
+            System.out.println ( e );
             exitAppOnServerShutDown();
        }
     }
