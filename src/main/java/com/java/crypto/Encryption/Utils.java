@@ -2,6 +2,8 @@ package com.java.crypto.Encryption;
 
 import java.math.BigInteger;
 
+import java.io.*;
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.ByteBuffer;
@@ -31,6 +33,8 @@ import java.util.Random;
 import java.util.Map;
 import java.util.HashMap;
 
+import com.java.crypto.Client;
+
 import javax.crypto.AEADBadTagException;
 import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.BadPaddingException;
@@ -41,11 +45,46 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
+import javax.sound.sampled.*;
+
 
 public final class Utils {
 
-    private static final String DEFAULT_ALGO = "RSA";
+	private static final String notif_filename= "notif.wav"; 
+    private static final String DEFAULT_ALGO  = "RSA";
     private static final Random random        = new Random();
+
+	public static void playSoundNotif ( Client clientContext )
+	{
+		    try
+    {
+        final Clip clip = (Clip)AudioSystem.getLine(new Line.Info(Clip.class));
+
+        clip.addLineListener(new LineListener()
+        {
+            @Override
+            public void update(LineEvent event)
+            {
+                if (event.getType() == LineEvent.Type.STOP)
+                    clip.close();
+            }
+        });
+
+        clip.open(
+			AudioSystem.getAudioInputStream( 
+				new File(
+					clientContext.getClass().getClassLoader().getResource(notif_filename).getFile()
+				)
+			)
+		);
+
+        clip.start();
+    }
+    catch (Exception exc)
+    {
+        exc.printStackTrace(System.out);
+    }
+	}
 
 	public static boolean compare( byte[] bytes1, byte[] bytes2 )
 	{
@@ -150,13 +189,14 @@ public static int modPow ( int value, int g, int p ) { return ( (int)  Math.pow 
  
  private static final int MIN_SIZE = 4;
 
- public static boolean correctNameNomenclature ( String name )
+	public static boolean correctNameNomenclature ( String name )
     {
 	    boolean hasSpecialChar = hasSpecialChar_ ( name );
 	    boolean hasNonAsciiChar= !Charset.forName("US-ASCII").newEncoder().canEncode( name ); 
 	    boolean hasCorrectSize = name.length () >= MIN_SIZE;
+		boolean isNotReserved  = !name.equals( "fossium" );
 
-	    return ( ! hasSpecialChar && ! hasNonAsciiChar && hasCorrectSize ) ;
+	    return ( ! hasSpecialChar && ! hasNonAsciiChar && hasCorrectSize  && isNotReserved );
     }
 
 

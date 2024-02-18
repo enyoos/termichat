@@ -51,7 +51,7 @@ public class App
                 System.out.println( 
                         new TextureBuilder().content( 
                             "[ERROR] incorrect name. Your name must be in ascii letters only, " + 
-                            "without special characters and containing atleast 4 characters." 
+                            "without special characters and containing atleast 4 characters. [FOSSIUM is reserved]" 
                         ).underline ( true ).foreground ( PaintOptions.RED ).build()
                 );
 

@@ -46,6 +46,8 @@ public class Client {
         "join", 
         "ban", 
         "close",
+        "!!",
+        "notif",
     };
 
     private volatile boolean RECEIVEDPACKET  = false;
@@ -66,16 +68,19 @@ public class Client {
     private static final BigInteger G        = new BigInteger ( "29477216248556571790188355105958421171017588675856077450982938565960829212013054309462070998391461094041831402145531512255212461711077147264591937559444025009276513139697905405362311715793483901079228943997043492071835753652280403690828672211623822204487686701542659932108817401902465502854674782655107704489715333636274537660725752397542128190204586783024276096660727817435884944669373187891992147367420696864345419030748867924233115063034424369413695996037194187915663302698301730217385865205733532876034279732307130146367186464815516016177746732081584886750880459484847733607088734405196106390759788696569480087431" );
     private static final BigInteger P        = new BigInteger ( "19474466331652733655832051458553385064043212458095124200912009294819345895972189505915769512313480865923793313340501916953015584166532313103740069387851835022945716114704862091376298763276441380923154722122437014796553689749812134516963749832403414532662243582453368471573597878812661606345274421114769635444409570652211078130819498231470427749591748807061847547957719205965753895170094138164528351514966602849951310091191492513611565485056820930462260513041657995223151734292549103405648018769834599247783995393243168507371182616792568116715228533111095312406381801789553091907467985780343386183520134766937438245637" );
 
-    private SecretKey sk         ;
-    private BigInteger tempSk    ;
-    private BigInteger diffieKey ;
-    private InputStream is       ; // channel where you can read from
-    private OutputStream os      ; // chanel where you can write from
-    private Sender sender        ; // this is essential to the command pattern
-    private Socket socket        ;
-    private String name          ;
+    private SecretKey sk           ;
+    private BigInteger tempSk      ;
+    private BigInteger diffieKey   ;
+    private InputStream is         ; // channel where you can read from
+    private OutputStream os        ; // chanel where you can write from
+    private Sender sender          ; // this is essential to the command pattern
+    private Socket socket          ;
+    private String name            ;
 
-    private volatile AtomicReference<String> currentGrpName   = new AtomicReference("default");
+    private String[] cacheStack = {"", ""}; // keeps track of the last command, and raw_command
+    public boolean notifOn      = true; 
+
+    private volatile AtomicReference<String> currentGrpName   = new AtomicReference("default_global");
     private final TextureBuilder tb                           = new TextureBuilder();
 
     // all the getters
@@ -171,7 +176,6 @@ public class Client {
             public void run()
             {
 
-                String prompt   = String.format( "%s [%s] > ", name, Client.this.currentGrpName.get() );
                 boolean running = true                         ;
                 String command  = ""                           ;
                 Action command_ = null                         ;
@@ -180,7 +184,8 @@ public class Client {
 
                 while ( running )
                 {
-                    //if ( !RECEIVEDPACKET ){
+                    String prompt   = String.format( "%s [%s] > ", name, Client.this.currentGrpName.get().trim() );
+
                     try{
                         promptUserForMsg ( 
                             prompt,
@@ -226,113 +231,142 @@ public class Client {
                     input.indexOf(" ") == -1 ? input.length() : input.indexOf(" ")
                 );
 
-                if ( command.equals( COMMANDS[0]) )
-                {
-                    start = System.currentTimeMillis();
-                    command_ = new PingServerOperation(sender);
-                    command_.execute();
-                }
-                else if ( command.equals(COMMANDS[1]) )
-                {
-                    command_ = new ShowServerInfoOperation( sender );
-                    command_.execute();
-                }
-                else if ( command.equals(COMMANDS[2]) )
-                {
-                    // split at the first occurence of " "
-                    input    = splitAtFirstOccurenceOf( " ", input )[1];
-                    command_ = new ListAllClientsNamesOperation( sender , input );
-                    command_.execute();
-                }
-                else if ( command.equals( COMMANDS[3]) )
-                {
-                    input    = splitAtFirstOccurenceOf( " ", input )[1];
-                    command_ = new ExitChatApplicationOperation( sender );
-                    command_.execute();
-                    
-                    this.exit();
-                }
-                else if ( command.equals(COMMANDS[4]) )
-                {
-                    input    = splitAtFirstOccurenceOf( " ", input )[1];
-                    command_ = new DMUserOperation(sender, input);
-                    command_.execute();
-                }
-                else if ( command.equals(COMMANDS[5]) )
-                {
-                    input    = splitAtFirstOccurenceOf( " ", input )[1];
-
-                    System.out.println( "input : " + input );
-
-                    command_ = new ShowAllCommandsOperation(sender, input);
-                    command_.execute();
-                }
-                else if ( command.equals(COMMANDS[6]) )
-                {
-                    input    = splitAtFirstOccurenceOf( " ", input )[1];
-                    command_ = new ShowAllUserInformation( sender, this );
-                    command_.execute();
-                } 
-                else if ( command.equals(COMMANDS[7]) )
-                {
-                    input    = splitAtFirstOccurenceOf( " ", input )[1];
-                    command_ = new CreateGroupOperation( sender, input );
-                    command_.execute();
-                }
-                else if ( command.equals(COMMANDS[8]) )
-                {
-                    input    = splitAtFirstOccurenceOf( " ", input )[1];
-                    command_ = new ShowAllGroupChatsOperation( sender, input );
-                    command_.execute();
-                }
-                else if ( command.equals(COMMANDS[9]) )
-                {
-                    input    = splitAtFirstOccurenceOf( " ", input )[1];
-
-                    // before joining, we reinit our data.
-                    // we generate our key
-                    // then send it ( after the execute statement ).
-                    this.sk     = null;
-                    this.tempSk = null;
-                    this.genKey()     ;
-
-                    command_ = new JoinGroupChatOperation( sender, input );
-                    command_.execute();
-                    sendKey();
-
-                }
-                else if ( command.equals(COMMANDS[10]) )
-                {
-                    input    = splitAtFirstOccurenceOf( " ", input )[1];
-                    command_ = new BanEntityOperation( sender, input );
-                    command_.execute();
-                }
-                else if ( command.equals(COMMANDS[11]) )
-                {
-                    input    = splitAtFirstOccurenceOf( " ",  input )[1];
-                    command_ = new CloseGCOperation( sender, input );
-                    command_.execute();
-                }
-                else 
-                {
-                    String meantCmd = lev ( input, COMMANDS );
-                    handleErrResponse( 
-                            "[ERROR] this command doesn't exist. Did you mean " + meantCmd + " ?"
-                    );
-                }
+                match_cmd( command, input, command_, sender );
             }
             else {
-
                 // by default, we broadcast each msg
-    // we generate the iv for each   msg.
-    boolean hasSk = sk != null;
-
-    if ( hasSk ){
-        sendPacket ( encryptMsg ( input ) );
+                // we generate the iv for each   msg.
+                boolean hasSk = sk != null;
+                if ( hasSk ){ sendPacket ( encryptMsg ( input ) ); }
+                else        { showNoSKWarning( ); }
+            }
+        }
     }
 
-    else { showNoSKWarning( ); }
-            }
+    private void match_cmd ( String command, String raw_command , Action command_, Sender sender ) 
+    {
+        cacheStack[1] = raw_command;
+
+        if ( command.equals( COMMANDS[0]) )
+        {
+            start = System.currentTimeMillis();
+            command_ = new PingServerOperation(sender);
+            command_.execute();
+
+            cacheStack[0] = COMMANDS[0];
+        }
+        else if ( command.equals(COMMANDS[1]) )
+        {
+            command_ = new ShowServerInfoOperation( sender );
+            command_.execute();
+
+            cacheStack[0] = COMMANDS[1];
+        }
+        else if ( command.equals(COMMANDS[2]) )
+        {
+            // split at the first occurence of " "
+            raw_command = splitAtFirstOccurenceOf( " ", raw_command )[1];
+            command_    = new ListAllClientsNamesOperation( sender , raw_command );
+            cacheStack[0]        = COMMANDS[2];
+
+            command_.execute();
+        }
+        else if ( command.equals( COMMANDS[3]) )
+        {
+            command_ = new ExitChatApplicationOperation( sender );
+            command_.execute();
+            
+            this.exit();
+        }
+        else if ( command.equals(COMMANDS[4]) )
+        {
+            raw_command = splitAtFirstOccurenceOf( " ", raw_command )[1];
+            command_    = new DMUserOperation(sender, raw_command );
+            cacheStack[0]        = COMMANDS[4];
+
+            command_.execute();
+        }
+        else if ( command.equals(COMMANDS[5]) )
+        {
+            raw_command = splitAtFirstOccurenceOf( " ", raw_command )[1];
+            command_    = new ShowAllCommandsOperation(sender, raw_command );
+            cacheStack[0]        = COMMANDS[5];
+
+            command_.execute();
+        }
+        else if ( command.equals(COMMANDS[6]) )
+        {
+            raw_command = splitAtFirstOccurenceOf( " ", raw_command )[1];
+            command_    = new ShowAllUserInformation( sender, this );
+            cacheStack[0]        = COMMANDS[6];
+
+            command_.execute();
+        } 
+        else if ( command.equals(COMMANDS[7]) )
+        {
+            raw_command = splitAtFirstOccurenceOf( " ", raw_command )[1];
+            command_    = new CreateGroupOperation( sender, raw_command );
+            cacheStack[0]        = COMMANDS[7];
+
+            command_.execute();
+        }
+        else if ( command.equals(COMMANDS[8]) )
+        {
+            raw_command = splitAtFirstOccurenceOf( " ", raw_command )[1];
+            command_    = new ShowAllGroupChatsOperation( sender, raw_command );
+            cacheStack[0]        = COMMANDS[8];
+
+            command_.execute();
+        }
+        else if ( command.equals(COMMANDS[9]) )
+        {
+            raw_command = splitAtFirstOccurenceOf( " ", raw_command )[1];
+            this.sk     = null;
+            this.tempSk = null;
+            command_    = new JoinGroupChatOperation( sender, raw_command );
+            cacheStack[0]        = COMMANDS[9];
+
+            this.genKey     ();
+            command_.execute();
+            sendKey         ();
+
+        }
+        else if ( command.equals(COMMANDS[10]) )
+        {
+            raw_command = splitAtFirstOccurenceOf( " ", raw_command )[1];
+            command_    = new BanEntityOperation( sender, raw_command );
+            cacheStack[0]        = COMMANDS[10];
+
+            command_.execute();
+        }
+        else if ( command.equals(COMMANDS[11]) )
+        {
+            raw_command = splitAtFirstOccurenceOf( " ",  raw_command )[1];
+            command_    = new CloseGCOperation( sender, raw_command );
+            cacheStack[0]        = COMMANDS[11];
+
+            command_.execute();
+        }
+        else if ( command.equals(COMMANDS[12]) )
+        {
+            // private void match_cmd ( String command, String raw_command , Action command_, Sender sender ) 
+            // TODO : here
+            match_cmd( cacheStack[0], cacheStack[1], command_, sender ); 
+        }
+        else if ( command.equals(COMMANDS[13]) )
+        {
+            raw_command = splitAtFirstOccurenceOf( " ",  raw_command )[1];
+            command_    = new ToggleNotifyOperation( sender, raw_command, this);
+            cacheStack[0]        = COMMANDS[13];
+
+            command_.execute();
+        }
+        else 
+        {
+            String meantCmd = lev ( raw_command, COMMANDS );
+            handleErrResponse( 
+                    "[ERROR] this command doesn't exist. Did you mean " + meantCmd + " ?"
+            );
         }
 
     }
@@ -368,6 +402,8 @@ public class Client {
 	    // inputTask()          ;
     }
     private void handleBroadcastEvent  ( Packet packet ) {
+
+        if ( notifOn ) playSoundNotif(this);
 
 	    byte[] bytes= packet.getMsg_()                             ;
 	    byte[] iv_  = unpaddIv ( bytes )                           ; 
@@ -504,6 +540,9 @@ public class Client {
 
     // the dm will be purple and bold
     private void handleDMResponse      ( String respContent ) { 
+
+        if ( notifOn ) playSoundNotif(this);
+        
         String out = tb.content ( respContent ).bold ( true ).foreground ( PaintOptions.MAGENTA ).build();
         System.out.println ( out ); 
 

@@ -20,3 +20,8 @@ WEIRD STUFF :
             at com.java.crypto.ClientHandler.receivePacket(ClientHandler.java:100)
             at com.java.crypto.ClientHandler.run(ClientHandler.java:777)
             at java.base/java.lang.Thread.run(Thread.java:842)
+
+
+----
+NOW LET'S TEST EVERYTHING.
+----

@@ -31,6 +31,8 @@ public class ShowAllCommandsOperation implements Action, Parseable{
         "join            joins the specified group chat ( gc )                             (-n/name of the group chat                                                        )",
         "ban             ban someone or a specific gc                                      (-n/name of the user, -t/duration (min) of the ban, -r/explicit reason of the ban )",
         "close           close a group chat                                                (-n/name of the group chat                                                        )",
+        "!!              executes the last command                                                                                                                           " ,
+        "notif          toggle notification sound                                         (-s/off or on                                                                      )",
     };
 
     private Sender sender          ;
@@ -137,6 +139,9 @@ public class ShowAllCommandsOperation implements Action, Parseable{
             sb.append("\n" + COMMANDS_DESCRIPTIONS[8]);
             sb.append("\n" + COMMANDS_DESCRIPTIONS[9]);
             sb.append("\n" + COMMANDS_DESCRIPTIONS[10]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[11]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[12]);
+            sb.append("\n" + COMMANDS_DESCRIPTIONS[13]);
         }
 
 
