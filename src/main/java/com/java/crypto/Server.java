@@ -3,9 +3,7 @@ package com.java.crypto;
 import java.io.IOException;
 import java.lang.Thread;
 
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 
 import javax.crypto.spec.IvParameterSpec;
 
@@ -31,9 +29,10 @@ public class Server {
 
     public Server ( String name, int port )
     {
-        InetAddress addr = InetAddress.getByName( DNS )      ;
 
         try {
+
+            InetAddress addr = InetAddress.getByName( DNS )      ;
             ss = new ServerSocket( port, 100, addr );
             this.name = name;
 
@@ -46,6 +45,10 @@ public class Server {
         {
             e.printStackTrace();
         }
+        // catch ( UnknownHostException e )
+        // {
+        //     e.printStackTrace();
+        // }
     }
 
 
