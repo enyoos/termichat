@@ -54,6 +54,7 @@ public class Client {
     private static char COMMAND_DELIMITER    = '/';
     private static long start                = 0;
     private static final String DEFAULT_HOST = "localhost";
+    private static final String IP_SRV       = "216.128.185.255";
     private static final String ALGORITHM    = "AES";
     private BigInteger MIXED_KEY                    ;
     private static final Scanner scanner     = new Scanner(System.in);
@@ -95,7 +96,7 @@ public class Client {
     {
         try {
             this.name=name;
-            this.socket = new Socket(DEFAULT_HOST, port);
+            this.socket = new Socket(IP_SRV, port);
 
             is             = socket.getInputStream();
             os             = socket.getOutputStream();
